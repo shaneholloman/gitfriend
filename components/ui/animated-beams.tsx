@@ -1,9 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useRef } from "react"
+import { useRef, useMemo } from "react"
 import { motion } from "framer-motion"
 import { useTheme } from "next-themes"
+import { cn } from "@/lib/utils"
 
 interface AnimatedBeamsProps {
   className?: string
@@ -18,71 +19,38 @@ interface AnimatedBeamsProps {
   maxDelay?: number
 }
 
-export const AnimatedBeams: React.FC<AnimatedBeamsProps> = ({
-  className = "",
-  beamCount = 8,
-  minOpacity = 0.05,
-  maxOpacity = 0.15,
-  minSize = 30,
-  maxSize = 80,
-  minDuration = 15,
-  maxDuration = 40,
-  minDelay = 0,
-  maxDelay = 10,
-}) => {
-  const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  // Generate random beams
-  const beams = Array.from({ length: beamCount }).map((_, i) => {
-    const size = Math.floor(Math.random() * (maxSize - minSize) + minSize)
-    const opacity = Math.random() * (maxOpacity - minOpacity) + minOpacity
-    const duration = Math.random() * (maxDuration - minDuration) + minDuration
-    const delay = Math.random() * (maxDelay - minDelay) + minDelay
-    const x = Math.random() * 100
-    const y = Math.random() * 100
-    const rotation = Math.random() * 360
-
-    return { id: i, size, opacity, duration, delay, x, y, rotation }
-  })
+export function AnimatedBeams({ className }: { className?: string }) {
+  // Use a fixed seed or deterministic values instead of random
+  const beams = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => ({
+      width: `${30 + i * 5}vw`,
+      height: `${30 + i * 5}vw`,
+      left: `${20 + i * 10}%`,
+      top: `${20 + i * 10}%`,
+      opacity: 0,
+      transform: "scale(0.8)",
+      background: `radial-gradient(circle, rgba(139, 92, 246, ${0.1 + i * 0.01}) 0%, rgba(139, 92, 246, 0) 70%)`
+    }));
+  }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}
-      aria-hidden="true"
-    >
-      {beams.map((beam) => (
+    <div className={cn("absolute inset-0 overflow-hidden", className)}>
+      {beams.map((beam, i) => (
         <motion.div
-          key={beam.id}
+          key={i}
           className="absolute rounded-full"
-          style={{
-            width: `${beam.size}vw`,
-            height: `${beam.size}vw`,
-            left: `${beam.x}%`,
-            top: `${beam.y}%`,
-            background: isDark
-              ? `radial-gradient(circle, rgba(139, 92, 246, ${beam.opacity}) 0%, rgba(139, 92, 246, 0) 70%)`
-              : `radial-gradient(circle, rgba(139, 92, 246, ${beam.opacity}) 0%, rgba(139, 92, 246, 0) 70%)`,
-            transform: `rotate(${beam.rotation}deg)`,
-          }}
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{
-            opacity: [0, 1, 0],
-            scale: [0.8, 1.2, 0.8],
-            x: [0, Math.random() * 100 - 50, 0],
-            y: [0, Math.random() * 100 - 50, 0],
-          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.5 }}
           transition={{
-            duration: beam.duration,
-            delay: beam.delay,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
+            duration: 3,
+            repeat: Infinity,
+            repeatType: "reverse",
+            delay: i * 0.5
           }}
+          style={beam}
         />
       ))}
     </div>
-  )
+  );
 }
 

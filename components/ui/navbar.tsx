@@ -41,8 +41,8 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
   }
 
   const navLinks = [
-    { href: "#features", label: "Features" },
-    { href: "#how-it-works", label: "How It Works" },
+    // { href: "#features", label: "Features" },
+    // { href: "#how-it-works", label: "How It Works" },
     { href: "/ai-chat", label: "AI Chat" },
     { href: "/generate-readme", label: "Generate Readme" },
     { href: "/git-mojis", label: "Git Mojis" },

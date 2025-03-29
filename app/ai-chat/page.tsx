@@ -29,6 +29,7 @@ import { useTheme } from "next-themes"
 import { format } from "date-fns"
 import { Message, MessageAvatar, MessageContent, MessageActions, MessageAction } from "@/components/ui/message"
 import { SuggestionCard } from "@/components/ui/suggestion-card"
+import Image from "next/image"
 
 type ChatMessage = {
   role: "user" | "assistant"
@@ -570,9 +571,15 @@ export default function AIChat() {
           <div className="container max-w-3xl mx-auto px-4 md:px-0">
             <form onSubmit={handleSubmit} className="relative">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <div className="flex items-center justify-center bg-primary/10 rounded-full p-1.5 relative">
-                  <div className="absolute inset-0 rounded-full bg-primary/20 blur-md"></div>
-                  <Zap className="h-4 w-4 text-primary relative z-10" />
+                <div className="relative w-8 h-8 flex items-center justify-center">
+                  <Image
+                    src="/gitfriend-icon.png"
+                    alt="GitFriend AI"
+                    z-index="1"
+                    width={100}
+                    height={100}
+                    className="object-contain"
+                  />
                 </div>
               </div>
               <div className="rounded-xl border border-input shadow-sm overflow-hidden bg-background transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary relative">
@@ -676,5 +683,4 @@ export default function AIChat() {
     </div>
   )
 }
-
 
