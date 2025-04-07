@@ -8,6 +8,7 @@ import { GitBranch, Menu, X, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
+import { UserAuthButton } from "@/components/ui/user-auth-button"
 
 interface NavbarProps {
   transparent?: boolean
@@ -128,20 +129,8 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
               <span className="sr-only">Toggle theme</span>
             </Button>
 
-            {/* Login Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden md:flex border-primary/20 hover:border-primary/50 transition-colors"
-            >
-              Log In
-            </Button>
-
-            {/* Sign Up Button */}
-            <Button size="sm" className="relative overflow-hidden group">
-              <span className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/30 to-primary/0 opacity-0 group-hover:opacity-100 animate-[shine_1.5s_ease_infinite] -z-10"></span>
-              Sign Up
-            </Button>
+            {/* Auth Button */}
+            <UserAuthButton />
 
             {/* Mobile Menu Toggle */}
             <Button
@@ -206,14 +195,6 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
                   </Link>
                 </motion.div>
               ))}
-              <div className="mt-4 space-y-3">
-                <Button variant="outline" onClick={() => setMobileMenuOpen(false)} className="w-full">
-                  Log In
-                </Button>
-                <Button onClick={() => setMobileMenuOpen(false)} className="w-full">
-                  Sign Up
-                </Button>
-              </div>
             </div>
           </motion.div>
         )}
