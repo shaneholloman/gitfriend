@@ -3,8 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/auth-context"
-import { LogOut, User } from "lucide-react"
-import Image from "next/image"
+import { LogOut } from 'lucide-react'
 import { FcGoogle } from "react-icons/fc"
 import {
   DropdownMenu,
@@ -14,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { UserProfileAvatar } from "@/components/ui/user-profile-avatar"
 
 export function UserAuthButton() {
   const { user, loading, signInWithGoogle, signOut } = useAuth()
@@ -41,22 +41,15 @@ export function UserAuthButton() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full">
-            {user.photoURL ? (
-              <Image
-                src={user.photoURL || "/placeholder.svg"}
-                alt={user.displayName || "User profile"}
-                width={32}
-                height={32}
-                className="h-8 w-8 rounded-full object-cover"
-              />
-            ) : (
-              <User className="h-4 w-4" />
-            )}
+          <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full p-0">
+            <UserProfileAvatar user={user} size="sm" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>{user.displayName || user.email || "User"}</DropdownMenuLabel>
+          <DropdownMenuLabel className="flex flex-col">
+            <span className="font-medium">{user.displayName || "User"}</span>
+            {user.email && <span className="text-xs text-muted-foreground">{user.email}</span>}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut()}>
             <LogOut className="mr-2 h-4 w-4" />
@@ -82,4 +75,3 @@ export function UserAuthButton() {
     </div>
   )
 }
-

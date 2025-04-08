@@ -4,11 +4,11 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { GitBranch, Menu, X, Sun, Moon } from "lucide-react"
+import { GitBranch, Menu, X, Sun, Moon } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
-import { UserAuthButton } from "@/components/ui/user-auth-button"
+import { UserAuthButton } from "@/components/auth/user-auth-button"
 
 interface NavbarProps {
   transparent?: boolean
@@ -202,4 +202,3 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
     </motion.header>
   )
 }
-

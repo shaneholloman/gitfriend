@@ -1,11 +1,11 @@
 "use client"
 
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { UserAuthButton } from "@/components/ui/user-auth-button"
+import { UserAuthButton } from "@/components/auth/user-auth-button"
 
 // Import the existing component code
 import { useState } from "react"
-import { GitBranch, Copy, Check, Search, Sun, Moon } from 'lucide-react'
+import { GitBranch, Copy, Check, Search, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"

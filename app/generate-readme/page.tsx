@@ -1,7 +1,7 @@
 "use client"
 
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { UserAuthButton } from "@/components/ui/user-auth-button"
+import { UserAuthButton } from "@/components/auth/user-auth-button"
 
 // Import the existing component code
 import type React from "react"
@@ -9,7 +9,23 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
-import { GitBranch, Copy, Check, FileText, BookOpen, Sun, Moon, Sparkles, Zap, Github, Code, CheckCircle2, Lock, Lightbulb, X } from 'lucide-react'
+import {
+  GitBranch,
+  Copy,
+  Check,
+  FileText,
+  BookOpen,
+  Sun,
+  Moon,
+  Sparkles,
+  Zap,
+  Github,
+  Code,
+  CheckCircle2,
+  Lock,
+  Lightbulb,
+  X,
+} from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import ReactMarkdown from "react-markdown"
@@ -363,7 +379,7 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
 
         {/* Rest of the component remains the same */}
         {/* ... */}
-        
+
         {/* Main content */}
         <main className="flex-1 relative">
           {/* Existing content */}
@@ -385,8 +401,8 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
                 <span>for Your</span> <span className="text-[hsl(var(--readme-primary))]">Project</span>
               </h1>
               <p className="text-[hsl(var(--readme-text-muted))] max-w-2xl mx-auto text-lg">
-                Accept repository details and let Git Friend analyze your codebase to generate professional documentation
-                in seconds.
+                Accept repository details and let Git Friend analyze your codebase to generate professional
+                documentation in seconds.
               </p>
             </motion.div>
 
@@ -505,7 +521,9 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
                     <Card
                       key={index}
                       className={`border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-card-bg))] cursor-pointer hover:bg-[hsl(var(--readme-bg))] transition-all duration-300 ${
-                        hoverState.examples[index] ? "shadow-md border-[hsl(var(--readme-primary))/30] scale-[1.02]" : ""
+                        hoverState.examples[index]
+                          ? "shadow-md border-[hsl(var(--readme-primary))/30] scale-[1.02]"
+                          : ""
                       }`}
                       onClick={() => handleExampleClick(repo.owner)}
                       onMouseEnter={() => {

@@ -2,7 +2,24 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { ArrowUp, Copy, Check, Sun, Moon, Mic, Search, GitBranch, GitMerge, GitPullRequest, GitCommit, Clock, Zap, GitGraph, ThumbsUp, ThumbsDown } from 'lucide-react'
+import {
+  ArrowUp,
+  Copy,
+  Check,
+  Sun,
+  Moon,
+  Mic,
+  Search,
+  GitBranch,
+  GitMerge,
+  GitPullRequest,
+  GitCommit,
+  Clock,
+  Zap,
+  GitGraph,
+  ThumbsUp,
+  ThumbsDown,
+} from "lucide-react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
