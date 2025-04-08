@@ -3,7 +3,6 @@
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { UserAuthButton } from "@/components/auth/user-auth-button"
 
-// Import the existing component code
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -25,17 +24,24 @@ import {
   Lock,
   Lightbulb,
   X,
+  AlertCircle,
+  Download,
+  Star,
+  GitFork,
+  Clock,
+  Calendar,
 } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import { TextShimmerWave } from "@/components/core/text-shimmer-wave"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Textarea } from "@/components/ui/textarea"
 
-// Keep the existing component implementation
 export default function GenerateReadme() {
-  // All the existing code for the GenerateReadme component
   // Array of README tips
   const readmeTips = [
     "GitHub's most starred README contains only emojis! 🌟",
@@ -46,6 +52,8 @@ export default function GenerateReadme() {
     "Keep your installation instructions up-to-date to reduce onboarding friction.",
     "A table of contents helps users navigate longer READMEs.",
     "Including a contributing guide encourages community participation.",
+    "Explain the problem your project solves in the first paragraph.",
+    "Use code examples to show how your project works.",
   ]
 
   // Array of README facts for the shimmer animation
@@ -55,6 +63,9 @@ export default function GenerateReadme() {
     "Crafting documentation...",
     "Generating content...",
     "Building your project story...",
+    "Structuring documentation...",
+    "Extracting key features...",
+    "Organizing installation steps...",
   ]
 
   // Example repositories
@@ -75,6 +86,8 @@ export default function GenerateReadme() {
     stars: number
     forks: number
     owner: string
+    created_at?: string
+    updated_at?: string
   } | null>(null)
   const { theme, setTheme } = useTheme()
   const [currentStep, setCurrentStep] = useState(0)
@@ -84,6 +97,8 @@ export default function GenerateReadme() {
   const [showOverlay, setShowOverlay] = useState(false)
   const overlayRef = useRef<HTMLDivElement>(null)
   const [isPro, setIsPro] = useState(false)
+  const [customRequirements, setCustomRequirements] = useState("")
+  const [error, setError] = useState<string | null>(null)
   const [hoverState, setHoverState] = useState({
     card: false,
     button: false,
@@ -162,15 +177,17 @@ export default function GenerateReadme() {
 
   const fetchRepoData = async () => {
     if (!validateRepoUrl(repoUrl)) {
-      alert("Please enter a valid GitHub repository URL")
+      setError("Please enter a valid GitHub repository URL")
       return
     }
 
+    setError(null)
     setIsGenerating(true)
     setShowOverlay(true)
     setCurrentStep(0)
     setProgress(0)
     setRepoData(null)
+    setGeneratedReadme("")
 
     try {
       // Extract owner and repo name from URL
@@ -178,144 +195,72 @@ export default function GenerateReadme() {
       const owner = urlParts[urlParts.length - 2]
       const repo = urlParts[urlParts.length - 1].replace(".git", "")
 
-      // Simulate fetching repository data
-      setTimeout(() => {
-        setRepoData({
-          name: repo,
-          description: "A sample repository description would appear here based on the actual GitHub data.",
-          language: "TypeScript",
-          stars: 42,
-          forks: 13,
-          owner: owner,
-        })
+      // Set initial repo data
+      setRepoData({
+        name: repo,
+        description: "Fetching repository description...",
+        language: "Analyzing...",
+        stars: 0,
+        forks: 0,
+        owner: owner,
+      })
 
-        // Move to step 1 - Analyzing Code Structure
+      // Move to step 1 - Analyzing Code Structure
+      setTimeout(() => {
         setCurrentStep(1)
         setProgress(25)
+      }, 2000)
 
-        // Simulate code analysis
-        setTimeout(() => {
-          // Move to step 2 - Understanding Project
-          setCurrentStep(2)
-          setProgress(50)
+      // Move to step 2 - Understanding Project
+      setTimeout(() => {
+        setCurrentStep(2)
+        setProgress(50)
+      }, 4000)
 
-          // Simulate project understanding
-          setTimeout(() => {
-            // Move to step 3 - Formatting Content
-            setCurrentStep(3)
-            setProgress(75)
+      // Move to step 3 - Formatting Content
+      setTimeout(() => {
+        setCurrentStep(3)
+        setProgress(75)
+      }, 6000)
 
-            // Simulate content formatting
-            setTimeout(() => {
-              generateReadmeWithGroq(repo, owner)
-            }, 3000)
-          }, 3000)
-        }, 3000)
-      }, 3000)
-    } catch (error) {
-      console.error("Error fetching repository data:", error)
-      setIsGenerating(false)
-      setShowOverlay(false)
-    }
-  }
+      // Call our API to generate the README
+      const response = await fetch("/api/generate-readme", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          repoUrl,
+          customRequirements: isPro && customRequirements ? customRequirements : undefined,
+        }),
+      })
 
-  const generateReadmeWithGroq = (repoName: string, owner: string) => {
-    // Simulate Groq AI generating README
-    setTimeout(() => {
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to generate README")
+      }
+
+      const data = await response.json()
+      setGeneratedReadme(data.readme)
+
+      // Update repo data if available
+      if (data.repoData) {
+        setRepoData(data.repoData)
+      }
+
       setProgress(100)
-
-      const readme = `# ${repoName}
-
-${repoData?.description || "A modern web application built with cutting-edge technologies."}
-
-![GitHub stars](https://img.shields.io/github/stars/${owner}/${repoName}?style=social)
-![GitHub forks](https://img.shields.io/github/forks/${owner}/${repoName}?style=social)
-![GitHub issues](https://img.shields.io/github/issues/${owner}/${repoName}?style=social)
-
-## Overview
-
-This project is a ${repoData?.language || "TypeScript"} application that provides a seamless user experience for managing and interacting with data. It's designed with modern best practices and focuses on performance, accessibility, and developer experience.
-
-## Features
-
-- 🚀 **High Performance**: Optimized for speed and efficiency
-- 🔒 **Secure**: Implements best security practices
-- 📱 **Responsive**: Works on all devices and screen sizes
-- ♿ **Accessible**: Follows WCAG guidelines for maximum accessibility
-- 🌐 **Internationalized**: Ready for global audiences
-
-## Installation
-
-\`\`\`bash
-# Clone the repository
-git clone https://github.com/${owner}/${repoName}.git
-
-# Navigate to the project directory
-cd ${repoName}
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
-\`\`\`
-
-## Usage
-
-After starting the development server, open your browser and navigate to \`http://localhost:3000\` to see the application in action.
-
-\`\`\`typescript
-// Example usage code
-import { SomeComponent } from './${repoName}';
-
-function App() {
-  return <SomeComponent />;
-}
-\`\`\`
-
-## API Reference
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| \`/api/items\` | GET | Retrieve all items |
-| \`/api/items/:id\` | GET | Retrieve a specific item |
-| \`/api/items\` | POST | Create a new item |
-| \`/api/items/:id\` | PUT | Update an existing item |
-| \`/api/items/:id\` | DELETE | Delete an item |
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (\`git checkout -b feature/amazing-feature\`)
-3. Commit your changes (\`git commit -m 'Add some amazing feature'\`)
-4. Push to the branch (\`git push origin feature/amazing-feature\`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc.
-
----
-
-Generated with ❤️ by [Git Friend](https://gitfriend.dev)
-`
-
-      setGeneratedReadme(readme)
 
       // Keep overlay visible for a moment to show completion
       setTimeout(() => {
         setShowOverlay(false)
         setIsGenerating(false)
       }, 1500)
-    }, 3000)
+    } catch (error) {
+      console.error("Error generating README:", error)
+      setError(error instanceof Error ? error.message : "Failed to generate README")
+      setIsGenerating(false)
+      setShowOverlay(false)
+    }
   }
 
   const copyToClipboard = () => {
@@ -324,8 +269,27 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const downloadReadme = () => {
+    const element = document.createElement("a")
+    const file = new Blob([generatedReadme], { type: "text/markdown" })
+    element.href = URL.createObjectURL(file)
+    element.download = "README.md"
+    document.body.appendChild(element)
+    element.click()
+    document.body.removeChild(element)
+  }
+
   const handleExampleClick = (repo: string) => {
     setRepoUrl(`https://github.com/${repo}`)
+  }
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A"
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
   }
 
   return (
@@ -361,6 +325,12 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
               >
                 Git Mojis
               </Link>
+              <Link
+                href="/repo-visualizer"
+                className="text-sm font-medium hover:text-[hsl(var(--readme-primary))] transition-colors"
+              >
+                Repo Visualizer
+              </Link>
             </nav>
             <div className="flex items-center gap-4">
               <Button
@@ -377,12 +347,8 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
           </div>
         </header>
 
-        {/* Rest of the component remains the same */}
-        {/* ... */}
-
         {/* Main content */}
         <main className="flex-1 relative">
-          {/* Existing content */}
           <div className="container max-w-6xl mx-auto py-12">
             <div className="flex justify-center mb-2">
               <div className="bg-[hsl(var(--readme-primary))/20] text-[hsl(var(--readme-primary))] px-4 py-1.5 rounded-full text-sm font-medium">
@@ -401,13 +367,28 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
                 <span>for Your</span> <span className="text-[hsl(var(--readme-primary))]">Project</span>
               </h1>
               <p className="text-[hsl(var(--readme-text-muted))] max-w-2xl mx-auto text-lg">
-                Accept repository details and let Git Friend analyze your codebase to generate professional
+                Enter a GitHub repository URL and let Git Friend analyze your codebase to generate professional
                 documentation in seconds.
               </p>
             </motion.div>
 
+            {error && (
+              <motion.div
+                className="max-w-3xl mx-auto mb-6"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
+
             <motion.div
-              className="max-w-3xl mx-auto mb-16"
+              className="max-w-3xl mx-auto mb-8"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -422,14 +403,14 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
                 <CardContent className="p-8">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-[hsl(var(--readme-primary))/20] flex items-center justify-center">
-                        <GitBranch className="h-4 w-4 text-[hsl(var(--readme-primary))]" />
+                      <div className="h-10 w-10 rounded-full bg-[hsl(var(--readme-primary))/20] flex items-center justify-center">
+                        <GitBranch className="h-5 w-5 text-[hsl(var(--readme-primary))]" />
                       </div>
-                      <span className="text-lg font-medium">Generate Your README</span>
+                      <span className="text-xl font-medium">Generate Your README</span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-[hsl(var(--readme-text-muted))]">Pro Version</span>
+                      <span className="text-sm text-[hsl(var(--readme-text-muted))]">Pro Features</span>
                       <button
                         className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors ${
                           isPro ? "bg-[hsl(var(--readme-primary))]" : "bg-[hsl(var(--readme-border))]"
@@ -446,7 +427,8 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
                   </div>
 
                   <p className="text-[hsl(var(--readme-text-muted))] text-sm mb-6">
-                    Enter a GitHub repository URL to analyze code and generate a detailed README file.
+                    Enter a GitHub repository URL to analyze code and generate a detailed README file that explains what
+                    your project does, why it exists, and how to use it.
                   </p>
 
                   <div className="relative mb-6 group">
@@ -475,8 +457,14 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
                         <span className="text-sm font-medium">Pro Feature</span>
                       </div>
                       <p className="text-[hsl(var(--readme-text-muted))] text-xs mb-2">
-                        Upgrade to Pro to customize your README with specific requirements and formatting preferences.
+                        Customize your README with specific requirements and formatting preferences.
                       </p>
+                      <Textarea
+                        className="w-full h-24 bg-[hsl(var(--readme-card-bg))] border border-[hsl(var(--readme-border))] rounded-md px-3 py-2 text-sm text-[hsl(var(--readme-text))] placeholder:text-[hsl(var(--readme-text-muted))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--readme-primary))] resize-none"
+                        placeholder="Add custom requirements for your README (e.g., 'Include a detailed API documentation section' or 'Focus on installation instructions for Docker')"
+                        value={customRequirements}
+                        onChange={(e) => setCustomRequirements(e.target.value)}
+                      />
                       <div className="grid grid-cols-2 gap-2 mt-3">
                         <div className="flex items-center gap-1.5">
                           <CheckCircle2 className="h-3 w-3 text-[hsl(var(--readme-primary))]" />
@@ -493,7 +481,7 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
                   <div className="flex justify-end">
                     <Button
                       className={`bg-[hsl(var(--readme-primary))] hover:bg-[hsl(var(--readme-primary-hover))] text-[hsl(var(--readme-primary-foreground))] px-6 py-2 rounded-md flex items-center gap-2 transition-all duration-300 ${
-                        hoverState.button ? "shadow-lg shadow-[hsl(var(--readme-primary))/20 scale-105" : ""
+                        hoverState.button ? "shadow-lg shadow-[hsl(var(--readme-primary))/20] scale-105" : ""
                       }`}
                       onClick={fetchRepoData}
                       disabled={isGenerating || !repoUrl}
@@ -516,6 +504,7 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
+                <h3 className="text-lg font-medium mb-4 text-center">Try with popular repositories</h3>
                 <div className="grid grid-cols-3 gap-4">
                   {exampleRepos.map((repo, index) => (
                     <Card
@@ -553,121 +542,265 @@ Generated with ❤️ by [Git Friend](https://gitfriend.dev)
             )}
 
             {generatedReadme && (
-              <motion.div
-                className="mt-8"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <Tabs defaultValue="preview" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-8 bg-[hsl(var(--readme-card-bg))] border border-[hsl(var(--readme-border))]">
-                    <TabsTrigger
-                      value="preview"
-                      className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--readme-primary))] data-[state=active]:text-[hsl(var(--readme-primary-foreground))]"
-                    >
-                      <BookOpen className="h-4 w-4" />
-                      Preview
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="markdown"
-                      className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--readme-primary))] data-[state=active]:text-[hsl(var(--readme-primary-foreground))]"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Markdown
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="preview">
-                    <Card className="relative shadow-lg border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-card-bg))]">
-                      <CardContent className="pt-6">
-                        <div className="absolute top-4 right-4 flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
-                            onClick={() => {
-                              setRepoUrl("")
-                              setGeneratedReadme("")
-                              setRepoData(null)
-                            }}
-                          >
-                            <GitBranch className="h-4 w-4" />
-                            New
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
-                            onClick={copyToClipboard}
-                          >
-                            {copied ? (
-                              <>
-                                <Check className="h-4 w-4" />
-                                Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-4 w-4" />
-                                Copy
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        <ScrollArea className="h-[600px] pr-4 mt-8">
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
-                            <ReactMarkdown>{generatedReadme}</ReactMarkdown>
+              <>
+                {repoData && (
+                  <motion.div
+                    className="max-w-3xl mx-auto mb-8"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Card className="border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-card-bg))] shadow-md overflow-hidden">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-full bg-[hsl(var(--readme-primary))/20] flex items-center justify-center">
+                              <Github className="h-6 w-6 text-[hsl(var(--readme-primary))]" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-bold">{repoData.name}</h3>
+                              <p className="text-sm text-[hsl(var(--readme-text-muted))]">
+                                {repoData.owner}/{repoData.name}
+                              </p>
+                            </div>
                           </div>
-                        </ScrollArea>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
 
-                  <TabsContent value="markdown">
-                    <Card className="relative shadow-lg border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-card-bg))]">
-                      <CardContent className="pt-6">
-                        <div className="absolute top-4 right-4 flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
-                            onClick={() => {
-                              setRepoUrl("")
-                              setGeneratedReadme("")
-                              setRepoData(null)
-                            }}
-                          >
-                            <GitBranch className="h-4 w-4" />
-                            New
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
-                            onClick={copyToClipboard}
-                          >
-                            {copied ? (
-                              <>
-                                <Check className="h-4 w-4" />
-                                Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-4 w-4" />
-                                Copy
-                              </>
+                          <div className="flex flex-wrap gap-3">
+                            <div className="flex items-center gap-1.5 bg-[hsl(var(--readme-bg))] px-3 py-1.5 rounded-full">
+                              <Star className="h-4 w-4 text-yellow-500" />
+                              <span className="text-sm">{repoData.stars || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-[hsl(var(--readme-bg))] px-3 py-1.5 rounded-full">
+                              <GitFork className="h-4 w-4 text-[hsl(var(--readme-primary))]" />
+                              <span className="text-sm">{repoData.forks || 0}</span>
+                            </div>
+                            {repoData.language && (
+                              <div className="flex items-center gap-1.5 bg-[hsl(var(--readme-bg))] px-3 py-1.5 rounded-full">
+                                <Code className="h-4 w-4 text-[hsl(var(--readme-text-muted))]" />
+                                <span className="text-sm">{repoData.language}</span>
+                              </div>
                             )}
-                          </Button>
+                          </div>
                         </div>
-                        <ScrollArea className="h-[600px] pr-4 mt-8">
-                          <pre className="bg-[hsl(var(--readme-bg))] p-4 rounded-lg overflow-x-auto text-sm">
-                            <code>{generatedReadme}</code>
-                          </pre>
-                        </ScrollArea>
+
+                        {repoData.description && (
+                          <p className="mt-4 text-[hsl(var(--readme-text-muted))]">{repoData.description}</p>
+                        )}
+
+                        {(repoData.created_at || repoData.updated_at) && (
+                          <div className="mt-4 flex flex-wrap gap-4 text-xs text-[hsl(var(--readme-text-muted))]">
+                            {repoData.created_at && (
+                              <div className="flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span>Created: {formatDate(repoData.created_at)}</span>
+                              </div>
+                            )}
+                            {repoData.updated_at && (
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5" />
+                                <span>Updated: {formatDate(repoData.updated_at)}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
-                  </TabsContent>
-                </Tabs>
-              </motion.div>
+                  </motion.div>
+                )}
+
+                <motion.div
+                  className="max-w-5xl mx-auto"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Tabs defaultValue="preview" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-8 bg-[hsl(var(--readme-card-bg))] border border-[hsl(var(--readme-border))]">
+                      <TabsTrigger
+                        value="preview"
+                        className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--readme-primary))] data-[state=active]:text-[hsl(var(--readme-primary-foreground))]"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                        Preview
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="markdown"
+                        className="flex items-center gap-2 data-[state=active]:bg-[hsl(var(--readme-primary))] data-[state=active]:text-[hsl(var(--readme-primary-foreground))]"
+                      >
+                        <FileText className="h-4 w-4" />
+                        Markdown
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="preview">
+                      <Card className="relative shadow-lg border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-card-bg))]">
+                        <CardContent className="pt-6">
+                          <div className="absolute top-4 right-4 flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
+                              onClick={() => {
+                                setRepoUrl("")
+                                setGeneratedReadme("")
+                                setRepoData(null)
+                              }}
+                            >
+                              <GitBranch className="h-4 w-4" />
+                              New
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
+                              onClick={downloadReadme}
+                            >
+                              <Download className="h-4 w-4" />
+                              Download
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
+                              onClick={copyToClipboard}
+                            >
+                              {copied ? (
+                                <>
+                                  <Check className="h-4 w-4" />
+                                  Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-4 w-4" />
+                                  Copy
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <ScrollArea className="h-[600px] pr-4 mt-8">
+                            <div className="prose prose-sm max-w-none dark:prose-invert px-6">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  img: ({ node, ...props }) => (
+                                    <img {...props} className="max-w-full h-auto my-4" alt={props.alt || ""} />
+                                  ),
+                                  a: ({ node, ...props }) => (
+                                    <a
+                                      {...props}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[hsl(var(--readme-primary))] hover:underline"
+                                    />
+                                  ),
+                                  h1: ({ node, ...props }) => (
+                                    <h1 {...props} className="text-3xl font-bold mt-8 mb-4" />
+                                  ),
+                                  h2: ({ node, ...props }) => (
+                                    <h2 {...props} className="text-2xl font-bold mt-6 mb-3" />
+                                  ),
+                                  h3: ({ node, ...props }) => <h3 {...props} className="text-xl font-bold mt-5 mb-2" />,
+                                  code: ({ node, inline, ...props }) =>
+                                    inline ? (
+                                      <code
+                                        {...props}
+                                        className="px-1 py-0.5 bg-[hsl(var(--readme-bg))] rounded text-[hsl(var(--readme-primary))]"
+                                      />
+                                    ) : (
+                                      <code {...props} className="block overflow-x-auto" />
+                                    ),
+                                  pre: ({ node, ...props }) => (
+                                    <pre
+                                      {...props}
+                                      className="p-4 bg-[hsl(var(--readme-bg))] rounded-md overflow-x-auto my-4"
+                                    />
+                                  ),
+                                  hr: ({ node, ...props }) => (
+                                    <hr {...props} className="my-6 border-[hsl(var(--readme-border))]" />
+                                  ),
+                                  table: ({ node, ...props }) => (
+                                    <div className="overflow-x-auto my-6">
+                                      <table
+                                        {...props}
+                                        className="min-w-full divide-y divide-[hsl(var(--readme-border))]"
+                                      />
+                                    </div>
+                                  ),
+                                  th: ({ node, ...props }) => (
+                                    <th
+                                      {...props}
+                                      className="px-4 py-2 bg-[hsl(var(--readme-bg))] font-medium text-left"
+                                    />
+                                  ),
+                                  td: ({ node, ...props }) => (
+                                    <td {...props} className="px-4 py-2 border-t border-[hsl(var(--readme-border))]" />
+                                  ),
+                                }}
+                              >
+                                {generatedReadme}
+                              </ReactMarkdown>
+                            </div>
+                          </ScrollArea>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="markdown">
+                      <Card className="relative shadow-lg border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-card-bg))]">
+                        <CardContent className="pt-6">
+                          <div className="absolute top-4 right-4 flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
+                              onClick={() => {
+                                setRepoUrl("")
+                                setGeneratedReadme("")
+                                setRepoData(null)
+                              }}
+                            >
+                              <GitBranch className="h-4 w-4" />
+                              New
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
+                              onClick={downloadReadme}
+                            >
+                              <Download className="h-4 w-4" />
+                              Download
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
+                              onClick={copyToClipboard}
+                            >
+                              {copied ? (
+                                <>
+                                  <Check className="h-4 w-4" />
+                                  Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-4 w-4" />
+                                  Copy
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <ScrollArea className="h-[600px] pr-4 mt-8">
+                            <pre className="bg-[hsl(var(--readme-bg))] p-4 rounded-lg overflow-x-auto text-sm font-mono">
+                              <code>{generatedReadme}</code>
+                            </pre>
+                          </ScrollArea>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </motion.div>
+              </>
             )}
           </div>
 
