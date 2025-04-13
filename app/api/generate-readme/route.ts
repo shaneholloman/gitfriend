@@ -10,61 +10,146 @@ const octokit = new Octokit({
   auth: process.env.GITHUB_ACCESS_TOKEN,
 });
 
+async function fetchLanguages(owner: string, repo: string) {
+  const { data } = await octokit.repos.listLanguages({ owner, repo });
+  return data;
+}
+
+async function fetchFileContents(owner: string, repo: string, path: string) {
+  try {
+    const { data } = await octokit.repos.getContent({ owner, repo, path });
+    return 'content' in data ? Buffer.from(data.content, 'base64').toString() : null;
+  } catch (e) {
+    console.error(`Error fetching file content at path: ${path}`, e);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { repoUrl, customInstructions } = await req.json();
-
     const match = repoUrl.match(/github\.com\/(.+?)\/(.+?)(?:\.git)?$/);
     if (!match) {
       return NextResponse.json({ error: "Invalid GitHub URL" }, { status: 400 });
     }
 
     const [_, owner, repo] = match;
-
     const { data: repoData } = await octokit.repos.get({ owner, repo });
-    const { data: contents } = await octokit.repos.getContent({ owner, repo, path: "" });
+    const { data: rootContents } = await octokit.repos.getContent({ owner, repo, path: "" });
 
-    const files = Array.isArray(contents)
-      ? contents.filter(item => item.type === "file").map(item => `- ${item.name}`).join("\n")
-      : "No files found.";
-
+    const files = Array.isArray(rootContents) ? rootContents.map(item => ({ name: item.name, type: item.type, path: item.path })) : [];
     const languages = await fetchLanguages(owner, repo);
-    const languageList = Object.keys(languages).join(", ");
+
+    let packageJson = null;
+    const packageJsonFile = files.find(file => file.name === "package.json");
+    if (packageJsonFile) {
+      const content = await fetchFileContents(owner, repo, packageJsonFile.path);
+      if (content) {
+        try {
+          packageJson = JSON.parse(content);
+        } catch (e) {
+          console.error("Error parsing package.json:", e);
+        }
+      }
+    }
+
+    const dependencies = packageJson ? { dependencies: packageJson.dependencies || {}, devDependencies: packageJson.devDependencies || {} } : null;
+
+    const configFiles = {
+      hasReact: files.some(f => f.name.includes("react") || (dependencies?.dependencies && Object.keys(dependencies.dependencies).includes("react"))),
+      hasNext: files.some(f => f.name === "next.config.js" || (dependencies?.dependencies && Object.keys(dependencies.dependencies).includes("next"))),
+      hasTypescript: files.some(f => f.name === "tsconfig.json" || files.some(file => file.name.endsWith(".ts") || file.name.endsWith(".tsx"))),
+      hasDocker: files.some(f => f.name === "Dockerfile" || f.name === "docker-compose.yml"),
+      hasTests: files.some(f => f.name.includes("test") || f.name.includes("spec") || (dependencies?.devDependencies && Object.keys(dependencies.devDependencies).some(dep => dep.match(/jest|mocha|vitest/)))),
+    };
+
+    const categorizedFiles = {
+      configuration: files.filter(f => f.name.match(/\.json$|\.config\.js$|\.env\.example$|\.gitignore/)).map(f => f.name),
+      sourceCode: files.filter(f => f.name.match(/\.(js|ts|jsx|tsx|py|go|rb|php|java)$/) && !f.name.endsWith(".config.js")).map(f => f.name),
+      documentation: files.filter(f => f.name.toLowerCase().includes("readme") || f.name.toLowerCase().includes("docs") || f.name.endsWith(".md")).map(f => f.name),
+    };
+
+    const existingReadme = files.some(f => f.name.toLowerCase() === "readme.md") 
+      ? await fetchFileContents(owner, repo, files.find(f => f.name.toLowerCase() === "readme.md")?.path || "") 
+      : "No existing README found";
 
     const basePrompt = `
 # Context
-You're a top-tier technical writer and open-source expert. Write a high-quality, professional, well-structured, visually appealing \`README.md\` file in **Markdown** based on the following GitHub repo data:
+You are generating a comprehensive and useful GitHub README.md file for a repository. Focus on providing clear, concise, and practical information that would help someone understand the project quickly.
 
 ## Repository Information
 - **Name**: ${repoData.name}
-- **Description**: ${repoData.description || "No description"}
+- **Description**: ${repoData.description || "No description provided"}
 - **Stars**: ${repoData.stargazers_count}
 - **Forks**: ${repoData.forks_count}
-- **Languages**: ${languageList}
+- **Languages**: ${Object.keys(languages).join(", ")}
+- **Owner**: ${owner}
 
-## Files
-${files}
+## Tech Stack Clues
+${JSON.stringify(configFiles, null, 2)}
 
-# Instructions
-Write the README in the style of modern open-source projects like **Mark Flow**, following this structure:
+## Dependencies (if available)
+${dependencies ? JSON.stringify(dependencies, null, 2) : "No package.json found"}
 
-1. Project Title + 1-line description + relevant emoji(s)
-2. Stylish badges (license, tech stack versions, etc.)
-3. ✨ Key Features (bullet list with emoji)
-4. ⚙️ Tech Stack (frameworks, libraries, tools with emojis)
-5. 🚀 Getting Started (prerequisites, installation, env setup, dev server)
-6. ✍️ Usage (steps to use the app, important flows)
-7. 🔐 API Authentication (if applicable)
-8. 🛡️ Rate Limiting or Security Features (if applicable)
-9. 🤝 Contributing (steps to contribute)
-10. 📝 License
+## File Structure Overview
+Configuration files: ${categorizedFiles.configuration.join(", ") || "None found"}
+Source code files: ${categorizedFiles.sourceCode.join(", ") || "None found"}
+Documentation files: ${categorizedFiles.documentation.join(", ") || "None found"}
 
-If applicable, infer any smart details (e.g., tech stack, instructions) from filenames or context.
+## Current README (if exists):
+${existingReadme}
+
+# README Generation Instructions
+Create a comprehensive README.md file that includes:
+
+1. **Title and Introduction**
+   - Clear project title
+   - Concise explanation of what the project does
+   - Brief overview of the problem it solves
+
+2. **Project Purpose and Background**
+   - Detailed explanation of why this project exists
+   - What problem it aims to solve
+   - Target audience/users
+
+3. **Features and Functionality**
+   - List of key features with brief descriptions
+   - What makes this project unique or useful
+   - Core functionality explained
+
+4. **Technology Stack**
+   - Languages used (with version if identifiable)
+   - Frameworks and libraries
+   - Tools and infrastructure
+
+5. **Installation and Setup**
+   - Prerequisites
+   - Step-by-step installation instructions
+   - Environment configuration
+   - How to run the project locally
+
+6. **Usage Examples**
+   - Basic usage instructions
+   - Code examples or screenshots if appropriate
+   - Common use cases
+
+7. **Project Structure**
+   - Brief explanation of important directories and files
+   - Architecture overview if applicable
+
+8. **Contributing Guidelines**
+   - How others can contribute
+   - Development workflow
+   - Code style and standards
+
+9. **License Information**
+   - Clear license statement
+   - Any restrictions on usage
 
 ${customInstructions ? `# Additional User Instructions\n${customInstructions}` : ""}
 
 # Output
-Return only the final \`README.md\` content, no explanation or headers.
+Return only the final README.md content in Markdown format, no explanation or additional headers.
 `;
 
     const completion = await openai.chat.completions.create({
@@ -74,6 +159,7 @@ Return only the final \`README.md\` content, no explanation or headers.
         { role: "user", content: "Generate the complete README.md file." },
       ],
       temperature: 0.7,
+      max_tokens: 2500,
     });
 
     const generatedReadme = completion.choices[0]?.message?.content;
@@ -90,9 +176,4 @@ Return only the final \`README.md\` content, no explanation or headers.
       { status: 500 }
     );
   }
-}
-
-async function fetchLanguages(owner: string, repo: string) {
-  const { data } = await octokit.repos.listLanguages({ owner, repo });
-  return data;
 }

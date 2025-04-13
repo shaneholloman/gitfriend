@@ -292,6 +292,300 @@ export default function GenerateReadme() {
     })
   }
 
+  // Emoji map
+  const emojiMap: { [key: string]: string } = {
+    smile: "😊",
+    rocket: "🚀",
+    heart: "❤️",
+    thumbsup: "👍",
+    warning: "⚠️",
+    check: "✅",
+    star: "⭐",
+    question: "❓",
+    exclamation: "❗",
+    arrow_right: "➡️",
+    arrow_left: "⬅️",
+    arrow_up: "⬆️",
+    arrow_down: "⬇️",
+    bulb: "💡",
+    book: "📖",
+    email: "📧",
+    phone: "📞",
+    calendar: "📅",
+    clock: "🕒",
+    wrench: "🔧",
+    hammer: "🔨",
+    gear: "⚙️",
+    computer: "💻",
+    keyboard: "⌨️",
+    mouse: "🖱️",
+    printer: "🖨️",
+    camera: "📷",
+    video_camera: "📹",
+    movie_camera: "🎥",
+    sound: "🔊",
+    mute: "🔇",
+    bell: "🔔",
+    no_bell: "🔕",
+    key: "🔑",
+    lock: "🔒",
+    unlock: "🔓",
+    flag: "🚩",
+    trophy: "🏆",
+    football: "⚽",
+    basketball: "🏀",
+    baseball: "⚾",
+    tennis: "🎾",
+    golf: "⛳",
+    car: "🚗",
+    bus: "🚌",
+    train: "🚆",
+    airplane: "✈️",
+    ship: "🚢",
+    house: "🏠",
+    office: "🏢",
+    post_office: "🏣",
+    hospital: "🏥",
+    bank: "🏦",
+    atm: "🏧",
+    hotel: "🏨",
+    convenience_store: "🏪",
+    school: "🏫",
+    department_store: "🏬",
+    factory: "🏭",
+    cup: "☕",
+    fork_and_knife: "🍴",
+    pizza: "🍕",
+    hamburger: "🍔",
+    fries: "🍟",
+    ice_cream: "🍦",
+    cake: "🎂",
+    cookie: "🍪",
+    candy: "🍬",
+    popcorn: "🍿",
+    wine_glass: "🍷",
+    cocktail: "🍸",
+    beer: "🍺",
+    baby: "👶",
+    boy: "👦",
+    girl: "👧",
+    man: "👨",
+    woman: "👩",
+    older_man: "👴",
+    older_woman: "👵",
+    police_officer: "👮",
+    doctor: "⚕️",
+    farmer: "🧑‍🌾",
+    cook: "🧑‍🍳",
+    student: "🧑‍🎓",
+    singer: "🧑‍🎤",
+    painter: "🧑‍🎨",
+    pilot: "🧑‍✈️",
+    astronaut: "🧑‍🚀",
+    firefighter: "🧑‍🚒",
+    detective: "🕵️",
+    ninja: "🥷",
+    zombie: "🧟",
+    alien: "👽",
+    ghost: "👻",
+    skull: "💀",
+    heart_eyes: "😍",
+    joy: "😂",
+    sob: "😭",
+    angry: "😠",
+    sleepy: "😴",
+    mask: "😷",
+    robot: "🤖",
+    cat: "🐱",
+    dog: "🐶",
+    mouse: "🐭",
+    rabbit: "🐰",
+    fox: "🦊",
+    bear: "🐻",
+    panda: "🐼",
+    koala: "🐨",
+    tiger: "🐯",
+    lion: "🦁",
+    cow: "🐮",
+    pig: "🐷",
+    chicken: "🐔",
+    penguin: "🐧",
+    bird: "🐦",
+    owl: "🦉",
+    butterfly: "🦋",
+    bug: "🐛",
+    ant: "🐜",
+    bee: "🐝",
+    beetle: "🐞",
+    fish: "🐟",
+    whale: "🐳",
+    dolphin: "🐬",
+    octopus: "🐙",
+    shell: "🐚",
+    tree: "🌳",
+    cactus: "🌵",
+    rose: "🌹",
+    sunflower: "🌻",
+    tulip: "🌷",
+    maple_leaf: "🍁",
+    mushroom: "🍄",
+    earth: "🌍",
+    moon: "🌙",
+    star: "⭐",
+    comet: "☄️",
+    fire: "🔥",
+    cloud: "☁️",
+    rainbow: "🌈",
+    umbrella: "☔",
+    snowflake: "❄️",
+    snowman: "☃️",
+    wind: "🌬️",
+    tornado: "🌪️",
+    fog: "🌫️",
+    ocean: "🌊",
+    mountain: "⛰️",
+    volcano: "🌋",
+    desert: "🏜️",
+    beach: "🏖️",
+    island: "🏝️",
+    cityscape: "🏙️",
+    night_sky: "🌃",
+    milky_way: "🌌",
+    sunrise: "🌅",
+    sunset: "🌇",
+    bridge: "🌉",
+    statue_of_liberty: "🗽",
+    eiffel_tower: "🗼",
+    pyramid: " pyramids",
+    fountain: "⛲",
+    roller_coaster: "🎢",
+    circus_tent: "🎪",
+    carousel_horse: "🎠",
+    ferris_wheel: "🎡",
+    performing_arts: "🎭",
+    video_game: "🎮",
+    slot_machine: "🎰",
+    billiards: "🎱",
+    dart: "🎯",
+    bow_and_arrow: "🏹",
+    boxing_glove: "🥊",
+    martial_arts_uniform: "🥋",
+    weight_lifting: "🏋️",
+    water_polo: "🤽",
+    ice_skate: "⛸️",
+    skier: "⛷️",
+    snowboarder: "🏂",
+    person_climbing: "🧗",
+    person_fencing: "🤺",
+    horse_racing: "🏇",
+    swimmer: "🏊",
+    runner: "🏃",
+    dancer: "💃",
+    man_dancing: "🕺",
+    couple: "💑",
+    family: "👪",
+    kiss: "💏",
+    heart: "❤️",
+    broken_heart: "💔",
+    two_hearts: "💕",
+    sparkling_heart: "💖",
+    revolving_hearts: "💞",
+    heartbeat: "💓",
+    heartpulse: "💗",
+    blue_heart: "💙",
+    green_heart: "💚",
+    yellow_heart: "💛",
+    purple_heart: "💜",
+    orange_heart: "🧡",
+    black_heart: "🖤",
+    white_heart: "🤍",
+    brown_heart: "🤎",
+    red_circle: "🔴",
+    blue_circle: "🔵",
+    yellow_circle: "🟡",
+    green_circle: "🟢",
+    purple_circle: "🟣",
+    orange_circle: "🟠",
+    black_circle: "⚫",
+    white_circle: "⚪",
+    red_square: "🟥",
+    blue_square: "🟦",
+    yellow_square: "🟨",
+    green_square: "🟩",
+    purple_square: "🟪",
+    orange_square: "🟧",
+    black_square: "⬛",
+    white_square: "⬜",
+    checkered_flag: "🏁",
+    triangular_flag_on_post: "🚩",
+    waving_white_flag: "🏳️",
+    waving_black_flag: "🏴",
+    pirate_flag: "🏴‍☠️",
+    rainbow_flag: "🏳️‍🌈",
+    transgender_flag: "🏳️‍⚧️",
+    united_nations: "🇺🇳",
+    european_union: "🇪🇺",
+    united_states: "🇺🇸",
+    canada: "🇨🇦",
+    united_kingdom: "🇬🇧",
+    france: "🇫🇷",
+    germany: "🇩🇪",
+    italy: "🇮🇹",
+    japan: "🇯🇵",
+    china: "🇨🇳",
+    south_korea: "🇰🇷",
+    russia: "🇷🇺",
+    spain: "🇪🇸",
+    portugal: "🇵🇹",
+    netherlands: "🇳🇱",
+    sweden: "🇸🇪",
+    norway: "🇳🇴",
+    denmark: "🇩🇰",
+    finland: "🇫🇮",
+    switzerland: "🇨🇭",
+    austria: "🇦🇹",
+    belgium: "🇧🇪",
+    ireland: "🇮🇪",
+    greece: "🇬🇷",
+    turkey: "🇹🇷",
+    egypt: "🇪🇬",
+    south_africa: "🇿🇦",
+    brazil: "🇧🇷",
+    argentina: "🇦🇷",
+    mexico: "🇲🇽",
+    india: "🇮🇳",
+    australia: "🇦🇺",
+    new_zealand: "🇳🇿",
+    indonesia: "🇮🇩",
+    thailand: "🇹🇭",
+    vietnam: "🇻🇳",
+    philippines: "🇵🇭",
+    malaysia: "🇲🇾",
+    singapore: "🇸🇬",
+    hong_kong: "🇭🇰",
+    taiwan: "🇹🇼",
+    israel: "🇮🇱",
+    saudi_arabia: "🇸🇦",
+    united_arab_emirates: "🇦🇪",
+    qatar: "🇶🇦",
+    kuwait: "🇰🇼",
+    bahrain: "🇧🇭",
+    oman: "🇴🇲",
+    jordan: "🇯🇴",
+    lebanon: "🇱🇧",
+    syria: "🇸🇾",
+    iraq: "🇮🇶",
+    iran: "🇮🇷",
+    pakistan: "🇵🇰",
+    afghanistan: "🇦🇫",
+    bangladesh: "🇧🇩",
+    sri_lanka: "🇱🇰",
+    nepal: "🇳🇵",
+    myanmar: "🇲🇲",
+    cambodia: "🇰🇭",
+    laos: "🇱🇦",
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen flex-col bg-[hsl(var(--readme-bg))] text-[hsl(var(--readme-text))]">
@@ -633,52 +927,52 @@ export default function GenerateReadme() {
                     </TabsList>
 
                     <TabsContent value="preview">
-                      <Card className="relative shadow-lg border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-card-bg))]">
+                      <Card className="relative shadow-lg border border-gray-300 readme-preview-container">
                         <CardContent className="pt-6">
                           <div className="absolute top-4 right-4 flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
-                              onClick={() => {
-                                setRepoUrl("")
-                                setGeneratedReadme("")
-                                setRepoData(null)
-                              }}
-                            >
-                              <GitBranch className="h-4 w-4" />
-                              New
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
-                              onClick={downloadReadme}
-                            >
-                              <Download className="h-4 w-4" />
-                              Download
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
-                              onClick={copyToClipboard}
-                            >
-                              {copied ? (
-                                <>
-                                  <Check className="h-4 w-4" />
-                                  Copied!
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-4 w-4" />
-                                  Copy
-                                </>
-                              )}
-                            </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
+                            onClick={() => {
+                              setRepoUrl("")
+                              setGeneratedReadme("")
+                              setRepoData(null)
+                            }}
+                          >
+                            <GitBranch className="h-4 w-4" />
+                            New
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
+                            onClick={downloadReadme}
+                          >
+                            <Download className="h-4 w-4" />
+                            Download
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
+                            onClick={copyToClipboard}
+                          >
+                            {copied ? (
+                              <>
+                                <Check className="h-4 w-4" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-4 w-4" />
+                                Copy
+                              </>
+                            )}
+                          </Button>
                           </div>
                           <ScrollArea className="h-[600px] pr-4 mt-8">
-                            <div className="prose prose-sm max-w-none dark:prose-invert px-6">
+                            <div className="prose prose-sm max-w-none px-6 readme-preview">
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
@@ -690,54 +984,66 @@ export default function GenerateReadme() {
                                       {...props}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-[hsl(var(--readme-primary))] hover:underline"
+                                      className="text-blue-600 hover:underline"
                                     />
                                   ),
                                   h1: ({ node, ...props }) => (
-                                    <h1 {...props} className="text-3xl font-bold mt-8 mb-4" />
+                                    <h1
+                                      {...props}
+                                      className="text-3xl font-bold mt-8 mb-4 pb-2 border-b border-gray-200"
+                                    />
                                   ),
                                   h2: ({ node, ...props }) => (
-                                    <h2 {...props} className="text-2xl font-bold mt-6 mb-3" />
+                                    <h2
+                                      {...props}
+                                      className="text-2xl font-bold mt-6 mb-3 pb-2 border-b border-gray-200"
+                                    />
                                   ),
                                   h3: ({ node, ...props }) => <h3 {...props} className="text-xl font-bold mt-5 mb-2" />,
-                                  code: ({ node, inline, ...props }) =>
+                                  code: ({ node, inline, className, ...props }) =>
                                     inline ? (
-                                      <code
-                                        {...props}
-                                        className="px-1 py-0.5 bg-[hsl(var(--readme-bg))] rounded text-[hsl(var(--readme-primary))]"
-                                      />
+                                      <code {...props} className="px-1 py-0.5 bg-gray-100 rounded text-gray-800" />
                                     ) : (
-                                      <code {...props} className="block overflow-x-auto" />
+                                      <code {...props} className="block overflow-x-auto text-gray-800" />
                                     ),
                                   pre: ({ node, ...props }) => (
                                     <pre
                                       {...props}
-                                      className="p-4 bg-[hsl(var(--readme-bg))] rounded-md overflow-x-auto my-4"
+                                      className="p-4 bg-gray-100 rounded-md overflow-x-auto my-4 border border-gray-200 text-gray-800"
                                     />
                                   ),
-                                  hr: ({ node, ...props }) => (
-                                    <hr {...props} className="my-6 border-[hsl(var(--readme-border))]" />
-                                  ),
+                                  hr: ({ node, ...props }) => <hr {...props} className="my-6 border-gray-300" />,
                                   table: ({ node, ...props }) => (
                                     <div className="overflow-x-auto my-6">
-                                      <table
-                                        {...props}
-                                        className="min-w-full divide-y divide-[hsl(var(--readme-border))]"
-                                      />
+                                      <table {...props} className="min-w-full divide-y divide-gray-300" />
                                     </div>
                                   ),
                                   th: ({ node, ...props }) => (
-                                    <th
-                                      {...props}
-                                      className="px-4 py-2 bg-[hsl(var(--readme-bg))] font-medium text-left"
-                                    />
+                                    <th {...props} className="px-4 py-2 bg-gray-100 font-medium text-left" />
                                   ),
                                   td: ({ node, ...props }) => (
-                                    <td {...props} className="px-4 py-2 border-t border-[hsl(var(--readme-border))]" />
+                                    <td {...props} className="px-4 py-2 border-t border-gray-300" />
+                                  ),
+                                  ul: ({ node, ...props }) => <ul {...props} className="list-disc pl-5 my-4" />,
+                                  ol: ({ node, ...props }) => <ol {...props} className="list-decimal pl-5 my-4" />,
+                                  li: ({ node, ...props }) => <li {...props} className="my-1" />,
+                                  blockquote: ({ node, ...props }) => (
+                                    <blockquote
+                                      {...props}
+                                      className="pl-4 border-l-4 border-gray-200 text-gray-700 my-4 italic"
+                                    />
+                                  ),
+                                  // Custom emoji renderer
+                                  Emoji: ({ emoji }) => (
+                                    <span role="img" aria-label={emoji} className="inline-block">
+                                      {emoji}
+                                    </span>
                                   ),
                                 }}
                               >
-                                {generatedReadme}
+                                {generatedReadme.replace(/:([a-zA-Z0-9_]+):/g, (match, p1) => {
+                                  return emojiMap[p1] || match
+                                })}
                               </ReactMarkdown>
                             </div>
                           </ScrollArea>
@@ -752,7 +1058,7 @@ export default function GenerateReadme() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))]  hover:bg-[hsl(var(--readme-bg))]"
                               onClick={() => {
                                 setRepoUrl("")
                                 setGeneratedReadme("")
@@ -912,7 +1218,7 @@ export default function GenerateReadme() {
                         <div
                           className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors ${
                             index < currentStep
-                              ? "bg-[hsl(var(--readme-primary))] text-white"
+                              ? "bg-[hsl(var(--readme-primary))] text-black"
                               : index === currentStep
                                 ? "bg-[hsl(var(--readme-primary))/20] text-[hsl(var(--readme-primary))]"
                                 : "bg-[hsl(var(--readme-border))] text-[hsl(var(--readme-text-muted))]"
