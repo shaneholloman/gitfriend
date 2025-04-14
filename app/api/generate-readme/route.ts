@@ -1,77 +1,190 @@
-import { Octokit } from "@octokit/rest";
-import OpenAI from "openai";
-import { NextRequest, NextResponse } from "next/server";
+import { Octokit } from "@octokit/rest"
+import OpenAI from "openai"
+import { type NextRequest, NextResponse } from "next/server"
+import { redis, CACHE_KEYS, CACHE_TTL, type ReadmeGenerationStatus } from "@/lib/redis"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
-});
+})
 
 const octokit = new Octokit({
   auth: process.env.GITHUB_ACCESS_TOKEN,
-});
+})
 
 async function fetchLanguages(owner: string, repo: string) {
-  const { data } = await octokit.repos.listLanguages({ owner, repo });
-  return data;
+  const { data } = await octokit.repos.listLanguages({ owner, repo })
+  return data
 }
 
 async function fetchFileContents(owner: string, repo: string, path: string) {
   try {
-    const { data } = await octokit.repos.getContent({ owner, repo, path });
-    return 'content' in data ? Buffer.from(data.content, 'base64').toString() : null;
+    const { data } = await octokit.repos.getContent({ owner, repo, path })
+    return "content" in data ? Buffer.from(data.content, "base64").toString() : null
   } catch (e) {
-    console.error(`Error fetching file content at path: ${path}`, e);
-    return null;
+    console.error(`Error fetching file content at path: ${path}`, e)
+    return null
+  }
+}
+
+// Check if README generation is already in progress or completed
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url)
+    const repoUrl = url.searchParams.get("repoUrl")
+
+    if (!repoUrl) {
+      return NextResponse.json({ error: "Repository URL is required" }, { status: 400 })
+    }
+
+    // Check if we have a cached README
+    const cachedReadme = await redis.get(CACHE_KEYS.README_GENERATION(repoUrl))
+    if (cachedReadme) {
+      return NextResponse.json({
+        status: "completed",
+        readme: cachedReadme,
+      })
+    }
+
+    // Check the status of generation
+    const status = await redis.get<ReadmeGenerationStatus>(CACHE_KEYS.README_STATUS(repoUrl))
+
+    return NextResponse.json({
+      status: status || "not_started",
+    })
+  } catch (error: any) {
+    console.error("Error checking README status:", error)
+    return NextResponse.json({ error: "Failed to check README status", details: error.message }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { repoUrl, customInstructions } = await req.json();
-    const match = repoUrl.match(/github\.com\/(.+?)\/(.+?)(?:\.git)?$/);
-    if (!match) {
-      return NextResponse.json({ error: "Invalid GitHub URL" }, { status: 400 });
+    const { repoUrl, customInstructions } = await req.json()
+
+    if (!repoUrl) {
+      return NextResponse.json({ error: "Repository URL is required" }, { status: 400 })
     }
 
-    const [_, owner, repo] = match;
-    const { data: repoData } = await octokit.repos.get({ owner, repo });
-    const { data: rootContents } = await octokit.repos.getContent({ owner, repo, path: "" });
+    const match = repoUrl.match(/github\.com\/(.+?)\/(.+?)(?:\.git)?$/)
+    if (!match) {
+      return NextResponse.json({ error: "Invalid GitHub URL" }, { status: 400 })
+    }
 
-    const files = Array.isArray(rootContents) ? rootContents.map(item => ({ name: item.name, type: item.type, path: item.path })) : [];
-    const languages = await fetchLanguages(owner, repo);
+    // Check if we already have a cached README
+    const cachedReadme = await redis.get(CACHE_KEYS.README_GENERATION(repoUrl))
+    if (cachedReadme) {
+      return NextResponse.json({
+        status: "completed",
+        readme: cachedReadme,
+        cached: true,
+      })
+    }
 
-    let packageJson = null;
-    const packageJsonFile = files.find(file => file.name === "package.json");
+    // Check if generation is already in progress
+    const status = await redis.get<ReadmeGenerationStatus>(CACHE_KEYS.README_STATUS(repoUrl))
+    if (status === "processing" || status === "pending") {
+      return NextResponse.json({
+        status: status,
+        message: "README generation is already in progress",
+      })
+    }
+
+    // Set status to pending
+    await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "pending", { ex: CACHE_TTL.STATUS })
+
+    // Start the generation process in the background
+    generateReadmeInBackground(repoUrl, customInstructions)
+
+    return NextResponse.json({
+      status: "pending",
+      message: "README generation has started",
+    })
+  } catch (error: any) {
+    console.error("Error starting README generation:", error)
+    return NextResponse.json({ error: "Failed to start README generation", details: error.message }, { status: 500 })
+  }
+}
+
+// Background process to generate README
+async function generateReadmeInBackground(repoUrl: string, customInstructions?: string) {
+  try {
+    // Update status to processing
+    await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "processing", { ex: CACHE_TTL.STATUS })
+
+    const match = repoUrl.match(/github\.com\/(.+?)\/(.+?)(?:\.git)?$/)
+    if (!match) {
+      throw new Error("Invalid GitHub URL")
+    }
+
+    const [_, owner, repo] = match
+    const { data: repoData } = await octokit.repos.get({ owner, repo })
+    const { data: rootContents } = await octokit.repos.getContent({ owner, repo, path: "" })
+
+    const files = Array.isArray(rootContents)
+      ? rootContents.map((item) => ({ name: item.name, type: item.type, path: item.path }))
+      : []
+    const languages = await fetchLanguages(owner, repo)
+
+    let packageJson = null
+    const packageJsonFile = files.find((file) => file.name === "package.json")
     if (packageJsonFile) {
-      const content = await fetchFileContents(owner, repo, packageJsonFile.path);
+      const content = await fetchFileContents(owner, repo, packageJsonFile.path)
       if (content) {
         try {
-          packageJson = JSON.parse(content);
+          packageJson = JSON.parse(content)
         } catch (e) {
-          console.error("Error parsing package.json:", e);
+          console.error("Error parsing package.json:", e)
         }
       }
     }
 
-    const dependencies = packageJson ? { dependencies: packageJson.dependencies || {}, devDependencies: packageJson.devDependencies || {} } : null;
+    const dependencies = packageJson
+      ? { dependencies: packageJson.dependencies || {}, devDependencies: packageJson.devDependencies || {} }
+      : null
 
     const configFiles = {
-      hasReact: files.some(f => f.name.includes("react") || (dependencies?.dependencies && Object.keys(dependencies.dependencies).includes("react"))),
-      hasNext: files.some(f => f.name === "next.config.js" || (dependencies?.dependencies && Object.keys(dependencies.dependencies).includes("next"))),
-      hasTypescript: files.some(f => f.name === "tsconfig.json" || files.some(file => file.name.endsWith(".ts") || file.name.endsWith(".tsx"))),
-      hasDocker: files.some(f => f.name === "Dockerfile" || f.name === "docker-compose.yml"),
-      hasTests: files.some(f => f.name.includes("test") || f.name.includes("spec") || (dependencies?.devDependencies && Object.keys(dependencies.devDependencies).some(dep => dep.match(/jest|mocha|vitest/)))),
-    };
+      hasReact: files.some(
+        (f) =>
+          f.name.includes("react") ||
+          (dependencies?.dependencies && Object.keys(dependencies.dependencies).includes("react")),
+      ),
+      hasNext: files.some(
+        (f) =>
+          f.name === "next.config.js" ||
+          (dependencies?.dependencies && Object.keys(dependencies.dependencies).includes("next")),
+      ),
+      hasTypescript: files.some(
+        (f) =>
+          f.name === "tsconfig.json" || files.some((file) => file.name.endsWith(".ts") || file.name.endsWith(".tsx")),
+      ),
+      hasDocker: files.some((f) => f.name === "Dockerfile" || f.name === "docker-compose.yml"),
+      hasTests: files.some(
+        (f) =>
+          f.name.includes("test") ||
+          f.name.includes("spec") ||
+          (dependencies?.devDependencies &&
+            Object.keys(dependencies.devDependencies).some((dep) => dep.match(/jest|mocha|vitest/))),
+      ),
+    }
 
     const categorizedFiles = {
-      configuration: files.filter(f => f.name.match(/\.json$|\.config\.js$|\.env\.example$|\.gitignore/)).map(f => f.name),
-      sourceCode: files.filter(f => f.name.match(/\.(js|ts|jsx|tsx|py|go|rb|php|java)$/) && !f.name.endsWith(".config.js")).map(f => f.name),
-      documentation: files.filter(f => f.name.toLowerCase().includes("readme") || f.name.toLowerCase().includes("docs") || f.name.endsWith(".md")).map(f => f.name),
-    };
+      configuration: files
+        .filter((f) => f.name.match(/\.json$|\.config\.js$|\.env\.example$|\.gitignore/))
+        .map((f) => f.name),
+      sourceCode: files
+        .filter((f) => f.name.match(/\.(js|ts|jsx|tsx|py|go|rb|php|java)$/) && !f.name.endsWith(".config.js"))
+        .map((f) => f.name),
+      documentation: files
+        .filter(
+          (f) =>
+            f.name.toLowerCase().includes("readme") || f.name.toLowerCase().includes("docs") || f.name.endsWith(".md"),
+        )
+        .map((f) => f.name),
+    }
 
-    const existingReadme = files.some(f => f.name.toLowerCase() === "readme.md") 
-      ? await fetchFileContents(owner, repo, files.find(f => f.name.toLowerCase() === "readme.md")?.path || "") 
-      : "No existing README found";
+    const existingReadme = files.some((f) => f.name.toLowerCase() === "readme.md")
+      ? await fetchFileContents(owner, repo, files.find((f) => f.name.toLowerCase() === "readme.md")?.path || "")
+      : "No existing README found"
 
     const basePrompt = `
 # Context
@@ -146,34 +259,51 @@ Create a comprehensive README.md file that includes:
    - Clear license statement
    - Any restrictions on usage
 
+## Emoji Usage
+Use Unicode emojis (not emoji codes) throughout the README to make it more visually appealing. Use emojis that are relevant to the content they accompany. Some examples:
+- Use 🚀 for features or getting started sections
+- Use 🔧 for installation or configuration
+- Use 💡 for tips or ideas
+- Use ⚠️ for important notes or warnings
+- Use 📚 for documentation sections
+- Use 🛠️ for development sections
+- Use ⭐ for highlighting important features
+
 ${customInstructions ? `# Additional User Instructions\n${customInstructions}` : ""}
 
 # Output
-Return only the final README.md content in Markdown format, no explanation or additional headers.
-`;
+Return only the final README.md content in Markdown format, no explanation or additional headers. Make sure to include Unicode emojis directly in the text, not as emoji codes.
+`
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
         { role: "system", content: basePrompt },
-        { role: "user", content: "Generate the complete README.md file." },
+        { role: "user", content: "Generate the complete README.md file with Unicode emojis." },
       ],
       temperature: 0.7,
       max_tokens: 2500,
-    });
+    })
 
-    const generatedReadme = completion.choices[0]?.message?.content;
+    const generatedReadme = completion.choices[0]?.message?.content
 
     if (!generatedReadme) {
-      return NextResponse.json({ error: "Failed to generate README" }, { status: 500 });
+      throw new Error("Failed to generate README")
     }
 
-    return NextResponse.json({ readme: generatedReadme });
-  } catch (error: any) {
-    console.error("Error generating README:", error);
-    return NextResponse.json(
-      { error: "Something went wrong", details: error.message },
-      { status: 500 }
-    );
+    // Cache the generated README
+    await redis.set(CACHE_KEYS.README_GENERATION(repoUrl), generatedReadme, { ex: CACHE_TTL.README })
+
+    // Update status to completed
+    await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "completed", { ex: CACHE_TTL.STATUS })
+
+    return generatedReadme
+  } catch (error) {
+    console.error("Error generating README:", error)
+
+    // Update status to failed
+    await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "failed", { ex: CACHE_TTL.STATUS })
+
+    throw error
   }
 }

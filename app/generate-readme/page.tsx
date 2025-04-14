@@ -205,6 +205,36 @@ export default function GenerateReadme() {
         owner: owner,
       })
 
+      // Start the README generation process
+      const startResponse = await fetch("/api/generate-readme", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          repoUrl,
+          customRequirements: isPro && customRequirements ? customRequirements : undefined,
+        }),
+      })
+
+      if (!startResponse.ok) {
+        const errorData = await startResponse.json()
+        throw new Error(errorData.error || "Failed to start README generation")
+      }
+
+      const startData = await startResponse.json()
+
+      // If README was already cached, show it immediately
+      if (startData.status === "completed" && startData.readme) {
+        setGeneratedReadme(startData.readme)
+        setProgress(100)
+        setTimeout(() => {
+          setShowOverlay(false)
+          setIsGenerating(false)
+        }, 1500)
+        return
+      }
+
       // Move to step 1 - Analyzing Code Structure
       setTimeout(() => {
         setCurrentStep(1)
@@ -223,38 +253,50 @@ export default function GenerateReadme() {
         setProgress(75)
       }, 6000)
 
-      // Call our API to generate the README
-      const response = await fetch("/api/generate-readme", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          repoUrl,
-          customRequirements: isPro && customRequirements ? customRequirements : undefined,
-        }),
-      })
+      // Poll for README generation status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/generate-readme?repoUrl=${encodeURIComponent(repoUrl)}`)
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to generate README")
-      }
+          if (!statusResponse.ok) {
+            throw new Error("Failed to check README generation status")
+          }
 
-      const data = await response.json()
-      setGeneratedReadme(data.readme)
+          const statusData = await statusResponse.json()
 
-      // Update repo data if available
-      if (data.repoData) {
-        setRepoData(data.repoData)
-      }
+          if (statusData.status === "completed" && statusData.readme) {
+            clearInterval(pollInterval)
+            setGeneratedReadme(statusData.readme)
+            setProgress(100)
 
-      setProgress(100)
+            // Keep overlay visible for a moment to show completion
+            setTimeout(() => {
+              setShowOverlay(false)
+              setIsGenerating(false)
+            }, 1500)
+          } else if (statusData.status === "failed") {
+            clearInterval(pollInterval)
+            throw new Error("README generation failed")
+          }
+          // Continue polling for pending or processing status
+        } catch (error) {
+          clearInterval(pollInterval)
+          console.error("Error checking README status:", error)
+          setError(error instanceof Error ? error.message : "Failed to generate README")
+          setIsGenerating(false)
+          setShowOverlay(false)
+        }
+      }, 3000) // Poll every 3 seconds
 
-      // Keep overlay visible for a moment to show completion
+      // Set a timeout to stop polling after 2 minutes
       setTimeout(() => {
-        setShowOverlay(false)
-        setIsGenerating(false)
-      }, 1500)
+        clearInterval(pollInterval)
+        if (isGenerating) {
+          setError("README generation is taking longer than expected. Please try again later.")
+          setIsGenerating(false)
+          setShowOverlay(false)
+        }
+      }, 120000) // 2 minutes
     } catch (error) {
       console.error("Error generating README:", error)
       setError(error instanceof Error ? error.message : "Failed to generate README")
@@ -290,300 +332,6 @@ export default function GenerateReadme() {
       month: "long",
       day: "numeric",
     })
-  }
-
-  // Emoji map
-  const emojiMap: { [key: string]: string } = {
-    smile: "😊",
-    rocket: "🚀",
-    heart: "❤️",
-    thumbsup: "👍",
-    warning: "⚠️",
-    check: "✅",
-    star: "⭐",
-    question: "❓",
-    exclamation: "❗",
-    arrow_right: "➡️",
-    arrow_left: "⬅️",
-    arrow_up: "⬆️",
-    arrow_down: "⬇️",
-    bulb: "💡",
-    book: "📖",
-    email: "📧",
-    phone: "📞",
-    calendar: "📅",
-    clock: "🕒",
-    wrench: "🔧",
-    hammer: "🔨",
-    gear: "⚙️",
-    computer: "💻",
-    keyboard: "⌨️",
-    mouse: "🖱️",
-    printer: "🖨️",
-    camera: "📷",
-    video_camera: "📹",
-    movie_camera: "🎥",
-    sound: "🔊",
-    mute: "🔇",
-    bell: "🔔",
-    no_bell: "🔕",
-    key: "🔑",
-    lock: "🔒",
-    unlock: "🔓",
-    flag: "🚩",
-    trophy: "🏆",
-    football: "⚽",
-    basketball: "🏀",
-    baseball: "⚾",
-    tennis: "🎾",
-    golf: "⛳",
-    car: "🚗",
-    bus: "🚌",
-    train: "🚆",
-    airplane: "✈️",
-    ship: "🚢",
-    house: "🏠",
-    office: "🏢",
-    post_office: "🏣",
-    hospital: "🏥",
-    bank: "🏦",
-    atm: "🏧",
-    hotel: "🏨",
-    convenience_store: "🏪",
-    school: "🏫",
-    department_store: "🏬",
-    factory: "🏭",
-    cup: "☕",
-    fork_and_knife: "🍴",
-    pizza: "🍕",
-    hamburger: "🍔",
-    fries: "🍟",
-    ice_cream: "🍦",
-    cake: "🎂",
-    cookie: "🍪",
-    candy: "🍬",
-    popcorn: "🍿",
-    wine_glass: "🍷",
-    cocktail: "🍸",
-    beer: "🍺",
-    baby: "👶",
-    boy: "👦",
-    girl: "👧",
-    man: "👨",
-    woman: "👩",
-    older_man: "👴",
-    older_woman: "👵",
-    police_officer: "👮",
-    doctor: "⚕️",
-    farmer: "🧑‍🌾",
-    cook: "🧑‍🍳",
-    student: "🧑‍🎓",
-    singer: "🧑‍🎤",
-    painter: "🧑‍🎨",
-    pilot: "🧑‍✈️",
-    astronaut: "🧑‍🚀",
-    firefighter: "🧑‍🚒",
-    detective: "🕵️",
-    ninja: "🥷",
-    zombie: "🧟",
-    alien: "👽",
-    ghost: "👻",
-    skull: "💀",
-    heart_eyes: "😍",
-    joy: "😂",
-    sob: "😭",
-    angry: "😠",
-    sleepy: "😴",
-    mask: "😷",
-    robot: "🤖",
-    cat: "🐱",
-    dog: "🐶",
-    mouse: "🐭",
-    rabbit: "🐰",
-    fox: "🦊",
-    bear: "🐻",
-    panda: "🐼",
-    koala: "🐨",
-    tiger: "🐯",
-    lion: "🦁",
-    cow: "🐮",
-    pig: "🐷",
-    chicken: "🐔",
-    penguin: "🐧",
-    bird: "🐦",
-    owl: "🦉",
-    butterfly: "🦋",
-    bug: "🐛",
-    ant: "🐜",
-    bee: "🐝",
-    beetle: "🐞",
-    fish: "🐟",
-    whale: "🐳",
-    dolphin: "🐬",
-    octopus: "🐙",
-    shell: "🐚",
-    tree: "🌳",
-    cactus: "🌵",
-    rose: "🌹",
-    sunflower: "🌻",
-    tulip: "🌷",
-    maple_leaf: "🍁",
-    mushroom: "🍄",
-    earth: "🌍",
-    moon: "🌙",
-    star: "⭐",
-    comet: "☄️",
-    fire: "🔥",
-    cloud: "☁️",
-    rainbow: "🌈",
-    umbrella: "☔",
-    snowflake: "❄️",
-    snowman: "☃️",
-    wind: "🌬️",
-    tornado: "🌪️",
-    fog: "🌫️",
-    ocean: "🌊",
-    mountain: "⛰️",
-    volcano: "🌋",
-    desert: "🏜️",
-    beach: "🏖️",
-    island: "🏝️",
-    cityscape: "🏙️",
-    night_sky: "🌃",
-    milky_way: "🌌",
-    sunrise: "🌅",
-    sunset: "🌇",
-    bridge: "🌉",
-    statue_of_liberty: "🗽",
-    eiffel_tower: "🗼",
-    pyramid: " pyramids",
-    fountain: "⛲",
-    roller_coaster: "🎢",
-    circus_tent: "🎪",
-    carousel_horse: "🎠",
-    ferris_wheel: "🎡",
-    performing_arts: "🎭",
-    video_game: "🎮",
-    slot_machine: "🎰",
-    billiards: "🎱",
-    dart: "🎯",
-    bow_and_arrow: "🏹",
-    boxing_glove: "🥊",
-    martial_arts_uniform: "🥋",
-    weight_lifting: "🏋️",
-    water_polo: "🤽",
-    ice_skate: "⛸️",
-    skier: "⛷️",
-    snowboarder: "🏂",
-    person_climbing: "🧗",
-    person_fencing: "🤺",
-    horse_racing: "🏇",
-    swimmer: "🏊",
-    runner: "🏃",
-    dancer: "💃",
-    man_dancing: "🕺",
-    couple: "💑",
-    family: "👪",
-    kiss: "💏",
-    heart: "❤️",
-    broken_heart: "💔",
-    two_hearts: "💕",
-    sparkling_heart: "💖",
-    revolving_hearts: "💞",
-    heartbeat: "💓",
-    heartpulse: "💗",
-    blue_heart: "💙",
-    green_heart: "💚",
-    yellow_heart: "💛",
-    purple_heart: "💜",
-    orange_heart: "🧡",
-    black_heart: "🖤",
-    white_heart: "🤍",
-    brown_heart: "🤎",
-    red_circle: "🔴",
-    blue_circle: "🔵",
-    yellow_circle: "🟡",
-    green_circle: "🟢",
-    purple_circle: "🟣",
-    orange_circle: "🟠",
-    black_circle: "⚫",
-    white_circle: "⚪",
-    red_square: "🟥",
-    blue_square: "🟦",
-    yellow_square: "🟨",
-    green_square: "🟩",
-    purple_square: "🟪",
-    orange_square: "🟧",
-    black_square: "⬛",
-    white_square: "⬜",
-    checkered_flag: "🏁",
-    triangular_flag_on_post: "🚩",
-    waving_white_flag: "🏳️",
-    waving_black_flag: "🏴",
-    pirate_flag: "🏴‍☠️",
-    rainbow_flag: "🏳️‍🌈",
-    transgender_flag: "🏳️‍⚧️",
-    united_nations: "🇺🇳",
-    european_union: "🇪🇺",
-    united_states: "🇺🇸",
-    canada: "🇨🇦",
-    united_kingdom: "🇬🇧",
-    france: "🇫🇷",
-    germany: "🇩🇪",
-    italy: "🇮🇹",
-    japan: "🇯🇵",
-    china: "🇨🇳",
-    south_korea: "🇰🇷",
-    russia: "🇷🇺",
-    spain: "🇪🇸",
-    portugal: "🇵🇹",
-    netherlands: "🇳🇱",
-    sweden: "🇸🇪",
-    norway: "🇳🇴",
-    denmark: "🇩🇰",
-    finland: "🇫🇮",
-    switzerland: "🇨🇭",
-    austria: "🇦🇹",
-    belgium: "🇧🇪",
-    ireland: "🇮🇪",
-    greece: "🇬🇷",
-    turkey: "🇹🇷",
-    egypt: "🇪🇬",
-    south_africa: "🇿🇦",
-    brazil: "🇧🇷",
-    argentina: "🇦🇷",
-    mexico: "🇲🇽",
-    india: "🇮🇳",
-    australia: "🇦🇺",
-    new_zealand: "🇳🇿",
-    indonesia: "🇮🇩",
-    thailand: "🇹🇭",
-    vietnam: "🇻🇳",
-    philippines: "🇵🇭",
-    malaysia: "🇲🇾",
-    singapore: "🇸🇬",
-    hong_kong: "🇭🇰",
-    taiwan: "🇹🇼",
-    israel: "🇮🇱",
-    saudi_arabia: "🇸🇦",
-    united_arab_emirates: "🇦🇪",
-    qatar: "🇶🇦",
-    kuwait: "🇰🇼",
-    bahrain: "🇧🇭",
-    oman: "🇴🇲",
-    jordan: "🇯🇴",
-    lebanon: "🇱🇧",
-    syria: "🇸🇾",
-    iraq: "🇮🇶",
-    iran: "🇮🇷",
-    pakistan: "🇵🇰",
-    afghanistan: "🇦🇫",
-    bangladesh: "🇧🇩",
-    sri_lanka: "🇱🇰",
-    nepal: "🇳🇵",
-    myanmar: "🇲🇲",
-    cambodia: "🇰🇭",
-    laos: "🇱🇦",
   }
 
   return (
@@ -930,46 +678,46 @@ export default function GenerateReadme() {
                       <Card className="relative shadow-lg border border-gray-300 readme-preview-container">
                         <CardContent className="pt-6">
                           <div className="absolute top-4 right-4 flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
-                            onClick={() => {
-                              setRepoUrl("")
-                              setGeneratedReadme("")
-                              setRepoData(null)
-                            }}
-                          >
-                            <GitBranch className="h-4 w-4" />
-                            New
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
-                            onClick={downloadReadme}
-                          >
-                            <Download className="h-4 w-4" />
-                            Download
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
-                            onClick={copyToClipboard}
-                          >
-                            {copied ? (
-                              <>
-                                <Check className="h-4 w-4" />
-                                Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-4 w-4" />
-                                Copy
-                              </>
-                            )}
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
+                              onClick={() => {
+                                setRepoUrl("")
+                                setGeneratedReadme("")
+                                setRepoData(null)
+                              }}
+                            >
+                              <GitBranch className="h-4 w-4" />
+                              New
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
+                              onClick={downloadReadme}
+                            >
+                              <Download className="h-4 w-4" />
+                              Download
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
+                              onClick={copyToClipboard}
+                            >
+                              {copied ? (
+                                <>
+                                  <Check className="h-4 w-4" />
+                                  Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-4 w-4" />
+                                  Copy
+                                </>
+                              )}
+                            </Button>
                           </div>
                           <ScrollArea className="h-[600px] pr-4 mt-8">
                             <div className="prose prose-sm max-w-none px-6 readme-preview">
@@ -1033,17 +781,9 @@ export default function GenerateReadme() {
                                       className="pl-4 border-l-4 border-gray-200 text-gray-700 my-4 italic"
                                     />
                                   ),
-                                  // Custom emoji renderer
-                                  Emoji: ({ emoji }) => (
-                                    <span role="img" aria-label={emoji} className="inline-block">
-                                      {emoji}
-                                    </span>
-                                  ),
                                 }}
                               >
-                                {generatedReadme.replace(/:([a-zA-Z0-9_]+):/g, (match, p1) => {
-                                  return emojiMap[p1] || match
-                                })}
+                                {generatedReadme}
                               </ReactMarkdown>
                             </div>
                           </ScrollArea>
