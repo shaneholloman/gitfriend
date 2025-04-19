@@ -367,12 +367,12 @@ export default function GenerateReadme() {
               >
                 Git Mojis
               </Link>
-              <Link
+              {/* <Link
                 href="/repo-visualizer"
                 className="text-sm font-medium hover:text-[hsl(var(--readme-primary))] transition-colors"
               >
                 Repo Visualizer
-              </Link>
+              </Link> */}
             </nav>
             <div className="flex items-center gap-4">
               <Button

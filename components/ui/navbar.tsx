@@ -47,7 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
     { href: "/ai-chat", label: "AI Chat" },
     { href: "/generate-readme", label: "Generate Readme" },
     { href: "/git-mojis", label: "Git Mojis" },
-    { href: "/repo-visualizer", label: "Repo Visualizer" },
+    // { href: "/repo-visualizer", label: "Repo Visualizer" },
   ]
 
   return (
