@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/auth-context"
-import { LogOut } from 'lucide-react'
+import { LogOut } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import {
   DropdownMenu,

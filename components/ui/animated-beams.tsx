@@ -1,9 +1,6 @@
 "use client"
-
-import type React from "react"
-import { useRef, useMemo } from "react"
+import { useMemo } from "react"
 import { motion } from "framer-motion"
-import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 
 interface AnimatedBeamsProps {
@@ -29,9 +26,9 @@ export function AnimatedBeams({ className }: { className?: string }) {
       top: `${20 + i * 10}%`,
       opacity: 0,
       transform: "scale(0.8)",
-      background: `radial-gradient(circle, rgba(139, 92, 246, ${0.1 + i * 0.01}) 0%, rgba(139, 92, 246, 0) 70%)`
-    }));
-  }, []);
+      background: `radial-gradient(circle, rgba(139, 92, 246, ${0.1 + i * 0.01}) 0%, rgba(139, 92, 246, 0) 70%)`,
+    }))
+  }, [])
 
   return (
     <div className={cn("absolute inset-0 overflow-hidden", className)}>
@@ -43,14 +40,13 @@ export function AnimatedBeams({ className }: { className?: string }) {
           animate={{ opacity: 0.5 }}
           transition={{
             duration: 3,
-            repeat: Infinity,
+            repeat: Number.POSITIVE_INFINITY,
             repeatType: "reverse",
-            delay: i * 0.5
+            delay: i * 0.5,
           }}
           style={beam}
         />
       ))}
     </div>
-  );
+  )
 }
-

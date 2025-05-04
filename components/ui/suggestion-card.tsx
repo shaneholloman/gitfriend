@@ -68,4 +68,3 @@ export function SuggestionCard({ icon, title, description, onClick, className, .
     </motion.div>
   )
 }
-

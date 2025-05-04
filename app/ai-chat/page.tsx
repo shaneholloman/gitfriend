@@ -569,16 +569,7 @@ export default function AIChat() {
             <div className="container max-w-3xl mx-auto px-4 md:px-0">
               <form onSubmit={handleSubmit} className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  <div className="relative w-8 h-8 flex items-center justify-center">
-                    <Image
-                      src="/gitfriend-icon.png"
-                      alt="GitFriend AI"
-                      z-index="1"
-                      width={100}
-                      height={100}
-                      className="object-contain"
-                    />
-                  </div>
+
                 </div>
                 <div className="rounded-xl border border-input shadow-sm overflow-hidden bg-background transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 focus-within:opacity-100 transition-opacity"></div>

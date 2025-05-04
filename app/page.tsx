@@ -17,20 +17,16 @@ import {
   Clock,
   GitGraph,
   Zap,
-  ArrowUp,
   HelpCircle,
-  ChevronRight,
 } from "lucide-react"
 import React from "react"
 import { AnimatePresence } from "framer-motion"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
-
-import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
 import BadgeShine from "@/components/ui/badge-shine"
 import TextAnimatedGradient from "@/components/ui/text-animated-gradient"
 import { AnimatedBeams } from "@/components/ui/animated-beams"
-import { Navbar } from "@/components/ui/navbar"
+import { NavbarDemo } from "@/components/ui/navbar"
 
 export default function LandingPage() {
   const [email, setEmail] = useState("")
@@ -186,20 +182,20 @@ export default function LandingPage() {
       setShowResponse(false)
 
       // Wait a moment before starting
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Start sequence
       setShowWelcome(true)
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
       setShowUserPrompt(true)
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
       setShowTyping(true)
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
       setShowResponse(true)
-      await new Promise(resolve => setTimeout(resolve, 4000))
+      await new Promise((resolve) => setTimeout(resolve, 4000))
     }
 
     // Run sequence and repeat
@@ -221,7 +217,7 @@ export default function LandingPage() {
       <AnimatedBeams className="z-0" />
 
       {/* Modern Navbar */}
-      <Navbar transparent={true} />
+      <NavbarDemo transparent={true} />
 
       <main className="flex-1 pt-16">
         {/* Hero Section */}
@@ -267,9 +263,7 @@ export default function LandingPage() {
             >
               <div className="rounded-xl border bg-card shadow-xl overflow-hidden">
                 {/* Chat Header */}
-                <div className="flex items-center justify-between border-b p-6 bg-muted/30">
-                  
-                </div>
+                <div className="flex items-center justify-between border-b p-6 bg-muted/30"></div>
 
                 {/* Chat Messages */}
                 <div className="p-6 h-[500px] overflow-y-auto bg-muted/10">
@@ -353,7 +347,9 @@ export default function LandingPage() {
                             <div className="bg-background/80 p-2 rounded text-xs font-mono mb-1 overflow-x-auto">
                               git reset --soft HEAD~1
                             </div>
-                            <p className="text-xs text-muted-foreground">This keeps your changes but undoes the commit.</p>
+                            <p className="text-xs text-muted-foreground">
+                              This keeps your changes but undoes the commit.
+                            </p>
                           </div>
                           <div>
                             <p className="text-sm font-medium mb-1">Option 2: Using git revert (safer option)</p>
@@ -374,15 +370,12 @@ export default function LandingPage() {
                     )}
                   </AnimatePresence>
                 </div>
-
-
               </div>
             </motion.div>
           </div>
 
           <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent"></div>
         </section>
-
 
         <section id="how-it-works" className="py-28 md:py-36 relative overflow-hidden" ref={howItWorksRef}>
           {/* Background elements */}
@@ -1100,201 +1093,204 @@ export default function LandingPage() {
         </section>
 
         <section className="py-28 md:py-36 relative overflow-hidden">
-  {/* Background elements */}
-  <div className="absolute inset-0 -z-10 bg-grid-pattern-enhanced opacity-5"></div>
-  <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background via-background/80 to-background/20"></div>
+          {/* Background elements */}
+          <div className="absolute inset-0 -z-10 bg-grid-pattern-enhanced opacity-5"></div>
+          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background via-background/80 to-background/20"></div>
 
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.7 }}
-    viewport={{ once: true }}
-    className="container mx-auto"
-  >
-    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-12">
-      {/* LEFT SIDE - Heading & Description */}
-      <div className="md:w-5/12 space-y-5">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
-          <HelpCircle className="w-4 h-4" />
-          FAQ
-        </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            viewport={{ once: true }}
+            className="container mx-auto"
+          >
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-12">
+              {/* LEFT SIDE - Heading & Description */}
+              <div className="md:w-5/12 space-y-5">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
+                  <HelpCircle className="w-4 h-4" />
+                  FAQ
+                </div>
 
-        <h2 className="text-3xl md:text-4xl font-bold leading-tight text-foreground">
-          Your Questions. <br />
-          <span className="text-primary">Answered Clearly.</span>
-        </h2>
+                <h2 className="text-3xl md:text-4xl font-bold leading-tight text-foreground">
+                  Your Questions. <br />
+                  <span className="text-primary">Answered Clearly.</span>
+                </h2>
 
-        <p className="text-base text-muted-foreground max-w-md">
-          Find answers to common questions about how Git Friend works, what AI features are available, and how to make the most of the experience.
-        </p>
-      </div>
+                <p className="text-base text-muted-foreground max-w-md">
+                  Find answers to common questions about how Git Friend works, what AI features are available, and how
+                  to make the most of the experience.
+                </p>
+              </div>
 
-      {/* RIGHT SIDE - Accordion */}
-      <Accordion
-        className="flex w-full flex-col max-w-3xl mx-auto md:mx-0 md:w-7/12"
-        type="single"
-        collapsible
-        defaultValue="getting-started"
-      >
-        <AccordionItem value="getting-started" className="py-2 border-b border-border/40">
-          <AccordionTrigger className="w-full py-4 text-left text-foreground hover:no-underline">
-            <motion.div className="flex items-center gap-2">
-              <motion.div className="h-4 w-4 text-foreground"></motion.div>
-              <span className="text-foreground font-medium">
-                How do I get started with Git Friend?
-              </span>
-            </motion.div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <p className="pl-6 pr-2 py-4 text-muted-foreground">
-                Getting started with Git Friend is easy! Simply install our extension or use our web interface. You'll have access to our AI-powered Git assistant, commit message generator, and other powerful tools to streamline your Git workflow.
-              </p>
-            </motion.div>
-          </AccordionContent>
-        </AccordionItem>
+              {/* RIGHT SIDE - Accordion */}
+              <Accordion
+                className="flex w-full flex-col max-w-3xl mx-auto md:mx-0 md:w-7/12"
+                type="single"
+                collapsible
+                defaultValue="getting-started"
+              >
+                <AccordionItem value="getting-started" className="py-2 border-b border-border/40">
+                  <AccordionTrigger className="w-full py-4 text-left text-foreground hover:no-underline">
+                    <motion.div className="flex items-center gap-2">
+                      <motion.div className="h-4 w-4 text-foreground"></motion.div>
+                      <span className="text-foreground font-medium">How do I get started with Git Friend?</span>
+                    </motion.div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <p className="pl-6 pr-2 py-4 text-muted-foreground">
+                        Getting started with Git Friend is easy! Simply install our extension or use our web interface.
+                        You'll have access to our AI-powered Git assistant, commit message generator, and other powerful
+                        tools to streamline your Git workflow.
+                      </p>
+                    </motion.div>
+                  </AccordionContent>
+                </AccordionItem>
 
-        <AccordionItem value="ai-features" className="py-2 border-b border-border/40">
-          <AccordionTrigger className="w-full py-4 text-left text-foreground hover:no-underline">
-            <motion.div className="flex items-center gap-2">
-              <motion.div className="h-4 w-4 text-foreground"></motion.div>
-              <span className="text-foreground font-medium">
-                What AI features are available?
-              </span>
-            </motion.div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <p className="pl-6 pr-2 py-4 text-muted-foreground">
-                Git Friend offers several AI-powered features including intelligent commit message generation, code review assistance, and natural language Git command suggestions. Our AI understands context and helps you write better commit messages and handle complex Git operations.
-              </p>
-            </motion.div>
-          </AccordionContent>
-        </AccordionItem>
+                <AccordionItem value="ai-features" className="py-2 border-b border-border/40">
+                  <AccordionTrigger className="w-full py-4 text-left text-foreground hover:no-underline">
+                    <motion.div className="flex items-center gap-2">
+                      <motion.div className="h-4 w-4 text-foreground"></motion.div>
+                      <span className="text-foreground font-medium">What AI features are available?</span>
+                    </motion.div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <p className="pl-6 pr-2 py-4 text-muted-foreground">
+                        Git Friend offers several AI-powered features including intelligent commit message generation,
+                        code review assistance, and natural language Git command suggestions. Our AI understands context
+                        and helps you write better commit messages and handle complex Git operations.
+                      </p>
+                    </motion.div>
+                  </AccordionContent>
+                </AccordionItem>
 
-        <AccordionItem value="security" className="py-2 border-b border-border/40">
-          <AccordionTrigger className="w-full py-4 text-left text-foreground hover:no-underline">
-            <motion.div className="flex items-center gap-2">
-              <motion.div className="h-4 w-4 text-foreground"></motion.div>
-              <span className="text-foreground font-medium">
-                Is my code and data secure?
-              </span>
-            </motion.div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <p className="pl-6 pr-2 py-4 text-muted-foreground">
-                Yes, security is our top priority. Git Friend processes your code locally and only sends necessary information to our AI services. We never store your code or sensitive data, and all communications are encrypted. You maintain full control over your repository.
-              </p>
-            </motion.div>
-          </AccordionContent>
-        </AccordionItem>
+                <AccordionItem value="security" className="py-2 border-b border-border/40">
+                  <AccordionTrigger className="w-full py-4 text-left text-foreground hover:no-underline">
+                    <motion.div className="flex items-center gap-2">
+                      <motion.div className="h-4 w-4 text-foreground"></motion.div>
+                      <span className="text-foreground font-medium">Is my code and data secure?</span>
+                    </motion.div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <p className="pl-6 pr-2 py-4 text-muted-foreground">
+                        Yes, security is our top priority. Git Friend processes your code locally and only sends
+                        necessary information to our AI services. We never store your code or sensitive data, and all
+                        communications are encrypted. You maintain full control over your repository.
+                      </p>
+                    </motion.div>
+                  </AccordionContent>
+                </AccordionItem>
 
-        <AccordionItem value="pricing" className="py-2 border-b border-border/40">
-          <AccordionTrigger className="w-full py-4 text-left text-foreground hover:no-underline">
-            <motion.div className="flex items-center gap-2">
-              <motion.div className="h-4 w-4 text-foreground"></motion.div>
-              <span className="text-foreground font-medium">
-                What are the pricing options?
-              </span>
-            </motion.div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <p className="pl-6 pr-2 py-4 text-muted-foreground">
-                Git Friend offers a free tier with basic features, perfect for individual developers. We also have Pro and Team plans with advanced features, priority support, and team collaboration tools. Visit our pricing page for detailed information.
-              </p>
-            </motion.div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
-  </motion.div>
-</section>
-
-
-
+                <AccordionItem value="pricing" className="py-2 border-b border-border/40">
+                  <AccordionTrigger className="w-full py-4 text-left text-foreground hover:no-underline">
+                    <motion.div className="flex items-center gap-2">
+                      <motion.div className="h-4 w-4 text-foreground"></motion.div>
+                      <span className="text-foreground font-medium">What are the pricing options?</span>
+                    </motion.div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <p className="pl-6 pr-2 py-4 text-muted-foreground">
+                        Git Friend offers a free tier with basic features, perfect for individual developers. We also
+                        have Pro and Team plans with advanced features, priority support, and team collaboration tools.
+                        Visit our pricing page for detailed information.
+                      </p>
+                    </motion.div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </motion.div>
+        </section>
       </main>
       <footer className="border-t/40 py-16 relative">
-  <div className="absolute inset-0 -z-10 bg-grid-pattern opacity-[0.02]"></div>
-  <div className="container">
-    <div className="flex flex-col md:flex-row md:justify-between items-center text-center md:text-left gap-12">
-      
-      {/* Branding */}
-      <div className="flex flex-col items-center md:items-start gap-4">
-        <div className="flex items-center gap-2">
-          <GitBranch className="h-5 w-5 text-primary/80" />
-          <span className="text-lg font-medium tracking-tight">Git Friend</span>
+        <div className="absolute inset-0 -z-10 bg-grid-pattern opacity-[0.02]"></div>
+        <div className="container">
+          <div className="flex flex-col md:flex-row md:justify-between items-center text-center md:text-left gap-12">
+            {/* Branding */}
+            <div className="flex flex-col items-center md:items-start gap-4">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-5 w-5 text-primary/80" />
+                <span className="text-lg font-medium tracking-tight">Git Friend</span>
+              </div>
+              <p className="text-sm text-muted-foreground/90 max-w-xs leading-relaxed">
+                Git Friend simplifies Git workflows, making version control intuitive and collaborative for developers
+                of all skill levels.
+              </p>
+              <Link
+                href="https://github.com/krishn404/markgit"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-muted-foreground/70 hover:text-foreground transition-all duration-300"
+              >
+                <svg
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-5 w-5 transition-transform duration-300 group-hover:scale-110"
+                >
+                  <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path>
+                  <path d="M9 18c-4.51 2-5-2-7-2"></path>
+                </svg>
+                <span className="text-sm hidden sm:inline">Star us on GitHub</span>
+              </Link>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex flex-col items-center md:items-end gap-4">
+              <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground/80">
+                <Link href="/about" className="hover:text-foreground transition">
+                  About
+                </Link>
+                <Link href="/features" className="hover:text-foreground transition">
+                  Features
+                </Link>
+                <Link href="/docs" className="hover:text-foreground transition">
+                  Docs
+                </Link>
+                <Link href="/contact" className="hover:text-foreground transition">
+                  Contact
+                </Link>
+              </div>
+              <p className="text-xs text-muted-foreground/60 mt-2">
+                © {new Date().getFullYear()} Git Friend. All rights reserved.
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground/90 max-w-xs leading-relaxed">
-          Git Friend simplifies Git workflows, making version control intuitive and collaborative for developers of all skill levels.
-        </p>
-        <Link 
-          href="https://github.com/krishn404/markgit" 
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 text-muted-foreground/70 hover:text-foreground transition-all duration-300"
-        >
-          <svg
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="h-5 w-5 transition-transform duration-300 group-hover:scale-110"
-          >
-            <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path>
-            <path d="M9 18c-4.51 2-5-2-7-2"></path>
-          </svg>
-          <span className="text-sm hidden sm:inline">Star us on GitHub</span>
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex flex-col items-center md:items-end gap-4">
-        <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground/80">
-          <Link href="/about" className="hover:text-foreground transition">About</Link>
-          <Link href="/features" className="hover:text-foreground transition">Features</Link>
-          <Link href="/docs" className="hover:text-foreground transition">Docs</Link>
-          <Link href="/contact" className="hover:text-foreground transition">Contact</Link>
-        </div>
-        <p className="text-xs text-muted-foreground/60 mt-2">
-          © {new Date().getFullYear()} Git Friend. All rights reserved.
-        </p>
-      </div>
-
-    </div>
-  </div>
-</footer>
-
+      </footer>
     </div>
   )
 }
-

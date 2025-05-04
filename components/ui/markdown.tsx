@@ -1,7 +1,9 @@
+"use client"
+
 import { cn } from "@/lib/utils"
 import { marked } from "marked"
 import { memo, useId, useMemo } from "react"
-import ReactMarkdown, { Components } from "react-markdown"
+import ReactMarkdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { CodeBlock, CodeBlockCode } from "./code-block"
 
@@ -26,18 +28,11 @@ function extractLanguage(className?: string): string {
 const INITIAL_COMPONENTS: Partial<Components> = {
   code: function CodeComponent({ className, children, ...props }) {
     const isInline =
-      !props.node?.position?.start.line ||
-      props.node?.position?.start.line === props.node?.position?.end.line
+      !props.node?.position?.start.line || props.node?.position?.start.line === props.node?.position?.end.line
 
     if (isInline) {
       return (
-        <span
-          className={cn(
-            "bg-primary-foreground rounded-sm px-1 font-mono text-sm",
-            className
-          )}
-          {...props}
-        >
+        <span className={cn("bg-primary-foreground rounded-sm px-1 font-mono text-sm", className)} {...props}>
           {children}
         </span>
       )
@@ -72,17 +67,12 @@ const MemoizedMarkdownBlock = memo(
   },
   function propsAreEqual(prevProps, nextProps) {
     return prevProps.content === nextProps.content
-  }
+  },
 )
 
 MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock"
 
-function MarkdownComponent({
-  children,
-  id,
-  className,
-  components = INITIAL_COMPONENTS,
-}: MarkdownProps) {
+function MarkdownComponent({ children, id, className, components = INITIAL_COMPONENTS }: MarkdownProps) {
   const generatedId = useId()
   const blockId = id ?? generatedId
   const blocks = useMemo(() => parseMarkdownIntoBlocks(children), [children])
@@ -90,11 +80,7 @@ function MarkdownComponent({
   return (
     <div className={className}>
       {blocks.map((block, index) => (
-        <MemoizedMarkdownBlock
-          key={`${blockId}-block-${index}`}
-          content={block}
-          components={components}
-        />
+        <MemoizedMarkdownBlock key={`${blockId}-block-${index}`} content={block} components={components} />
       ))}
     </div>
   )

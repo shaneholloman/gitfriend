@@ -8,4 +8,3 @@ const BadgeShine = ({ children }: { children: React.ReactNode }) => {
 }
 
 export default BadgeShine
-

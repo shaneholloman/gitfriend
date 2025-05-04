@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth-context"
 import { LoginModal } from "@/components/auth/login-modal"
@@ -46,11 +48,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   return (
     <>
       {user ? children : null}
-      <LoginModal 
-        isOpen={showLoginModal} 
-        onClose={handleCloseModal}
-        onSuccess={handleLoginSuccess}
-      />
+      <LoginModal isOpen={showLoginModal} onClose={handleCloseModal} onSuccess={handleLoginSuccess} />
     </>
   )
 }

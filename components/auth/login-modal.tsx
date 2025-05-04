@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/auth-context"
-import { X, GitBranch } from 'lucide-react'
+import { X, GitBranch } from "lucide-react"
 import { motion } from "framer-motion"
 import { FcGoogle } from "react-icons/fc"
 
@@ -39,12 +39,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
         exit={{ opacity: 0, scale: 0.95 }}
         className="bg-background rounded-lg shadow-lg max-w-md w-full p-6 relative"
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-4"
-          onClick={onClose}
-        >
+        <Button variant="ghost" size="icon" className="absolute right-4 top-4" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
 
@@ -52,13 +47,11 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
             <GitBranch className="h-8 w-8 text-primary" />
           </div>
-          
-          <h2 className="text-2xl font-bold mb-2">Sign in to Git Friend</h2>
-          <p className="text-muted-foreground mb-6">
-            You need to be signed in to access this feature.
-          </p>
 
-          <Button 
+          <h2 className="text-2xl font-bold mb-2">Sign in to Git Friend</h2>
+          <p className="text-muted-foreground mb-6">You need to be signed in to access this feature.</p>
+
+          <Button
             className="w-full flex items-center justify-center gap-2 py-6"
             onClick={handleLogin}
             disabled={isLoading}

@@ -1,38 +1,31 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { motion, AnimatePresence } from "framer-motion"
-import { GitBranch, Menu, X, Sun, Moon } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Menu, X, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import { UserAuthButton } from "@/components/auth/user-auth-button"
+import { motion, AnimatePresence } from "framer-motion"
 
-interface NavbarProps {
-  transparent?: boolean
-}
-
-export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
+export function NavbarDemo({ transparent = false }: { transparent?: boolean }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const pathname = usePathname()
 
-  // Handle scroll events
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20)
     }
-
     window.addEventListener("scroll", handleScroll)
-    handleScroll() // Check initial scroll position
-
+    handleScroll()
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Handle theme mounting
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -41,13 +34,12 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
     setTheme(theme === "dark" ? "light" : "dark")
   }
 
-  const navLinks = [
-    // { href: "#features", label: "Features" },
-    // { href: "#how-it-works", label: "How It Works" },
-    { href: "/ai-chat", label: "AI Chat" },
-    { href: "/generate-readme", label: "Generate Readme" },
-    { href: "/git-mojis", label: "Git Mojis" },
-    // { href: "/repo-visualizer", label: "Repo Visualizer" },
+  const navItems = [
+    { name: "Home", link: "/" },
+    { name: "AI Chat", link: "/ai-chat" },
+    { name: "Generate README", link: "/generate-readme" },
+    { name: "Git Mojis", link: "/git-mojis" },
+    { name: "Codebase", link: "/codebase" },
   ]
 
   return (
@@ -67,30 +59,23 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <motion.div
-              whileHover={{ rotate: [0, 15, 0], scale: 1.1 }}
-              transition={{ duration: 0.5 }}
-              className="relative"
-            >
-              <div className="absolute -inset-1 rounded-full bg-primary/10 blur-md opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <GitBranch className="h-6 w-6 relative text-primary" />
-            </motion.div>
-            <motion.span
-              className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80"
-              animate={{ scale: scrolled ? 0.95 : 1 }}
-              transition={{ duration: 0.2 }}
-            >
-              Git Friend
-            </motion.span>
+          <Link href="/" className="flex items-center gap-2">
+            <span className="font-bold text-lg">GitFriend</span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link, index) => (
-              <Link key={index} href={link.href} className="relative px-3 py-2 text-sm font-medium group">
-                <span className="relative z-10 text-foreground/80 group-hover:text-foreground transition-colors duration-200">
-                  {link.label}
+            {navItems.map((item) => (
+              <Link
+                key={item.link}
+                href={item.link}
+                className={cn(
+                  "relative px-3 py-2 text-sm font-medium group",
+                  pathname === item.link ? "text-primary" : "text-foreground/80 hover:text-foreground"
+                )}
+              >
+                <span className="relative z-10 transition-colors duration-200">
+                  {item.name}
                 </span>
                 <span className="absolute bottom-0 left-0 w-full h-[2px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
               </Link>
@@ -138,11 +123,11 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
               variant="ghost"
               size="icon"
               className="md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
             >
               <AnimatePresence mode="wait">
-                {mobileMenuOpen ? (
+                {isMobileMenuOpen ? (
                   <motion.div
                     key="close"
                     initial={{ rotate: -90, opacity: 0 }}
@@ -171,7 +156,7 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
 
       {/* Mobile Menu */}
       <AnimatePresence>
-        {mobileMenuOpen && (
+        {isMobileMenuOpen && (
           <motion.div
             className="fixed inset-0 z-30 bg-background/95 backdrop-blur-md pt-20"
             initial={{ opacity: 0, y: -20 }}
@@ -180,7 +165,7 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
             transition={{ duration: 0.2 }}
           >
             <div className="container flex flex-col gap-4 p-4">
-              {navLinks.map((link, index) => (
+              {navItems.map((item, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, x: -20 }}
@@ -188,11 +173,14 @@ export const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
                   transition={{ delay: index * 0.05 }}
                 >
                   <Link
-                    href={link.href}
-                    className="flex items-center text-lg font-medium p-3 hover:bg-primary/5 rounded-md transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
+                    href={item.link}
+                    className={cn(
+                      "flex items-center text-lg font-medium p-3 hover:bg-primary/5 rounded-md transition-colors",
+                      pathname === item.link ? "text-primary" : "text-foreground/80"
+                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <span>{link.label}</span>
+                    <span>{item.name}</span>
                   </Link>
                 </motion.div>
               ))}
