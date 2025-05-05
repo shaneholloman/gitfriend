@@ -4,14 +4,8 @@ import { useState } from "react"
 import { Folder, File, ChevronUp, ChevronDown, ArrowUp, FilePlus, FolderPlus, Trash2, Pencil } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
-import {
-  ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-} from "@/components/ui/context-menu"
 import { Checkbox } from "@/components/ui/checkbox"
+import { cn } from "@/lib/utils"
 
 interface FileExplorerTableProps {
   files: FileItem[]
@@ -22,7 +16,7 @@ interface FileExplorerTableProps {
   currentPath: string[]
   onCreateFile: () => void
   onCreateFolder: () => void
-  onDeleteFile: (filePath: string) => void
+  onDeleteFile: (filePath: string, fileName: string) => void
   onDeleteFolder: (folderName: string) => void
   onRenameFile: (filePath: string, fileName: string) => void
   onRenameFolder: (folderName: string) => void
@@ -37,6 +31,10 @@ interface FileItem {
   size: number
   contentType: string
   updated: string
+}
+
+function isGitKeepFile(fileName: string): boolean {
+  return fileName === ".gitkeep"
 }
 
 export function FileExplorerTable({
@@ -75,214 +73,202 @@ export function FileExplorerTable({
     return 0
   })
 
-  const sortedFiles = [...files].sort((a, b) => {
-    if (sortField === "name") {
-      return sortDirection === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
-    } else if (sortField === "updated") {
-      return sortDirection === "asc"
-        ? new Date(a.updated).getTime() - new Date(b.updated).getTime()
-        : new Date(b.updated).getTime() - new Date(a.updated).getTime()
-    }
-    return 0
-  })
+  const sortedFiles = [...files]
+    .filter((file) => !isGitKeepFile(file.name))
+    .sort((a, b) => {
+      if (sortField === "name") {
+        return sortDirection === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+      } else if (sortField === "updated") {
+        return sortDirection === "asc"
+          ? new Date(a.updated).getTime() - new Date(b.updated).getTime()
+          : new Date(b.updated).getTime() - new Date(a.updated).getTime()
+      }
+      return 0
+    })
 
   const getFolderPath = (folderName: string): string => {
     return [...currentPath, folderName].join("/")
   }
 
+  // Render a folder row
+  const renderFolderRow = (folder: string) => {
+    const folderPath = getFolderPath(folder)
+    const isSelected = selectedItems.has(folderPath)
+
+    return (
+      <tr
+        key={folder}
+        className={cn("hover:bg-muted/30 border-b cursor-pointer", isSelected && "bg-primary/10")}
+        onClick={() => (selectionMode ? onToggleSelect(folderPath, !isSelected) : onNavigateFolder(folder))}
+      >
+        <td className="py-2 px-4">
+          <div className="flex items-center gap-2">
+            {selectionMode && (
+              <Checkbox
+                checked={isSelected}
+                className="mr-2"
+                onCheckedChange={(checked) => {
+                  onToggleSelect(folderPath, !!checked)
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+            <Folder className="h-4 w-4 text-blue-500" />
+            <span>{folder}</span>
+          </div>
+        </td>
+        <td className="py-2 px-4 text-sm text-muted-foreground">-</td>
+        <td className="py-2 px-4 text-right">
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRenameFolder(folder)
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-red-500"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDeleteFolder(folder)
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </td>
+      </tr>
+    )
+  }
+
+  // Render a file row
+  const renderFileRow = (file: FileItem) => {
+    const isSelected = selectedItems.has(file.path)
+
+    return (
+      <tr
+        key={file.path}
+        className={cn("hover:bg-muted/30 border-b cursor-pointer", isSelected && "bg-primary/10")}
+        onClick={() => (selectionMode ? onToggleSelect(file.path, !isSelected) : onSelectFile(file.name, file.path))}
+      >
+        <td className="py-2 px-4">
+          <div className="flex items-center gap-2">
+            {selectionMode && (
+              <Checkbox
+                checked={isSelected}
+                className="mr-2"
+                onCheckedChange={(checked) => {
+                  onToggleSelect(file.path, !!checked)
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+            <File className="h-4 w-4 text-gray-500" />
+            <span>{file.name}</span>
+          </div>
+        </td>
+        <td className="py-2 px-4 text-sm text-muted-foreground">
+          {formatDistanceToNow(new Date(file.updated), { addSuffix: true })}
+        </td>
+        <td className="py-2 px-4 text-right">
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRenameFile(file.path, file.name)
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-red-500"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDeleteFile(file.path, file.name)
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </td>
+      </tr>
+    )
+  }
+
   return (
-    <ContextMenu>
-      <ContextMenuTrigger>
-        <div className="border rounded-md overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-muted/30 border-b">
-                <th className="text-left py-2 px-4 font-medium text-sm">
-                  <button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort("name")}>
-                    Name
-                    {sortField === "name" &&
-                      (sortDirection === "asc" ? (
-                        <ChevronUp className="h-3 w-3" />
-                      ) : (
-                        <ChevronDown className="h-3 w-3" />
-                      ))}
-                  </button>
-                </th>
-                <th className="text-left py-2 px-4 font-medium text-sm">
-                  <button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort("updated")}>
-                    Last updated
-                    {sortField === "updated" &&
-                      (sortDirection === "asc" ? (
-                        <ChevronUp className="h-3 w-3" />
-                      ) : (
-                        <ChevronDown className="h-3 w-3" />
-                      ))}
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentPath.length > 0 && (
-                <tr className="hover:bg-muted/30 border-b">
-                  <td colSpan={2} className="py-2 px-4">
-                    <Button variant="ghost" className="flex items-center gap-2 p-1 h-auto" onClick={onNavigateUp}>
-                      <ArrowUp className="h-4 w-4" />
-                      <span>Go up</span>
-                    </Button>
-                  </td>
-                </tr>
-              )}
-
-              {sortedFolders.map((folder) => (
-                <ContextMenu key={folder}>
-                  <ContextMenuTrigger>
-                    <tr
-                      className={cn(
-                        "hover:bg-muted/30 border-b cursor-pointer",
-                        selectedItems.has(getFolderPath(folder)) && "bg-primary/10",
-                      )}
-                      onClick={() =>
-                        selectionMode
-                          ? onToggleSelect(getFolderPath(folder), !selectedItems.has(getFolderPath(folder)))
-                          : onNavigateFolder(folder)
-                      }
-                    >
-                      <td className="py-2 px-4">
-                        <div className="flex items-center gap-2">
-                          {selectionMode && (
-                            <Checkbox
-                              checked={selectedItems.has(getFolderPath(folder))}
-                              className="mr-2"
-                              onCheckedChange={(checked) => {
-                                onToggleSelect(getFolderPath(folder), !!checked)
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          )}
-                          <Folder className="h-4 w-4 text-blue-500" />
-                          <span>{folder}</span>
-                        </div>
-                      </td>
-                      <td className="py-2 px-4 text-sm text-muted-foreground">-</td>
-                    </tr>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => onNavigateFolder(folder)} className="gap-2">
-                      <Folder className="h-4 w-4" />
-                      Open
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      onClick={() => {
-                        onNavigateFolder(folder)
-                        onCreateFile()
-                      }}
-                      className="gap-2"
-                    >
-                      <FilePlus className="h-4 w-4" />
-                      New File
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      onClick={() => {
-                        onNavigateFolder(folder)
-                        onCreateFolder()
-                      }}
-                      className="gap-2"
-                    >
-                      <FolderPlus className="h-4 w-4" />
-                      New Folder
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => onRenameFolder(folder)} className="gap-2">
-                      <Pencil className="h-4 w-4" />
-                      Rename
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => onDeleteFolder(folder)} className="gap-2 text-red-600">
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              ))}
-
-              {sortedFiles.map((file) => (
-                <ContextMenu key={file.path}>
-                  <ContextMenuTrigger>
-                    <tr
-                      className={cn(
-                        "hover:bg-muted/30 border-b cursor-pointer",
-                        selectedItems.has(file.path) && "bg-primary/10",
-                      )}
-                      onClick={() =>
-                        selectionMode
-                          ? onToggleSelect(file.path, !selectedItems.has(file.path))
-                          : onSelectFile(file.name, file.path)
-                      }
-                    >
-                      <td className="py-2 px-4">
-                        <div className="flex items-center gap-2">
-                          {selectionMode && (
-                            <Checkbox
-                              checked={selectedItems.has(file.path)}
-                              className="mr-2"
-                              onCheckedChange={(checked) => {
-                                onToggleSelect(file.path, !!checked)
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          )}
-                          <File className="h-4 w-4 text-gray-500" />
-                          <span>{file.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-2 px-4 text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(file.updated), { addSuffix: true })}
-                      </td>
-                    </tr>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => onSelectFile(file.name, file.path)} className="gap-2">
-                      <File className="h-4 w-4" />
-                      Open
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => onRenameFile(file.path, file.name)} className="gap-2">
-                      <Pencil className="h-4 w-4" />
-                      Rename
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => onDeleteFile(file.path)} className="gap-2 text-red-600">
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              ))}
-
-              {folders.length === 0 && files.length === 0 && (
-                <tr>
-                  <td colSpan={2} className="py-8 text-center text-muted-foreground">
-                    This folder is empty
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+    <div className="border rounded-md overflow-hidden">
+      <div className="flex justify-between items-center p-3 bg-muted/30 border-b">
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={onCreateFile} className="gap-2">
+            <FilePlus className="h-4 w-4" />
+            New File
+          </Button>
+          <Button variant="outline" size="sm" onClick={onCreateFolder} className="gap-2">
+            <FolderPlus className="h-4 w-4" />
+            New Folder
+          </Button>
         </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onClick={onCreateFile} className="gap-2">
-          <FilePlus className="h-4 w-4" />
-          New File
-        </ContextMenuItem>
-        <ContextMenuItem onClick={onCreateFolder} className="gap-2">
-          <FolderPlus className="h-4 w-4" />
-          New Folder
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
-  )
-}
+        <div className="text-sm text-muted-foreground">
+          {sortedFiles.length} file{sortedFiles.length !== 1 ? "s" : ""}, {folders.length} folder
+          {folders.length !== 1 ? "s" : ""}
+        </div>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr className="bg-muted/30 border-b">
+            <th className="text-left py-2 px-4 font-medium text-sm">
+              <button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort("name")}>
+                Name
+                {sortField === "name" &&
+                  (sortDirection === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
+              </button>
+            </th>
+            <th className="text-left py-2 px-4 font-medium text-sm">
+              <button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort("updated")}>
+                Last updated
+                {sortField === "updated" &&
+                  (sortDirection === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
+              </button>
+            </th>
+            <th className="text-right py-2 px-4 font-medium text-sm">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {currentPath.length > 0 && (
+            <tr className="hover:bg-muted/30 border-b">
+              <td colSpan={3} className="py-2 px-4">
+                <Button variant="ghost" className="flex items-center gap-2 p-1 h-auto" onClick={onNavigateUp}>
+                  <ArrowUp className="h-4 w-4" />
+                  <span>Go up</span>
+                </Button>
+              </td>
+            </tr>
+          )}
 
-// Helper function for conditional class names
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ")
+          {sortedFolders.map(renderFolderRow)}
+          {sortedFiles.map(renderFileRow)}
+
+          {folders.length === 0 && files.length === 0 && (
+            <tr>
+              <td colSpan={3} className="py-8 text-center text-muted-foreground">
+                This folder is empty
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
 }

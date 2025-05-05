@@ -1,4 +1,4 @@
-import { NavbarDemo as Navbar } from "@/components/ui/navbar"
+import { Navbar } from "@/components/ui/navbar"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Loading() {

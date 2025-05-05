@@ -22,6 +22,10 @@ interface FileItem {
   updated: string
 }
 
+function isGitKeepFile(fileName: string): boolean {
+  return fileName === ".gitkeep"
+}
+
 export function FileExplorer({ repo, path, onNavigate, onSelectFile }: FileExplorerProps) {
   const [files, setFiles] = useState<FileItem[]>([])
   const [folders, setFolders] = useState<string[]>([])
@@ -62,7 +66,9 @@ export function FileExplorer({ repo, path, onNavigate, onSelectFile }: FileExplo
       }
 
       const data = await response.json()
-      setFiles(data.files || [])
+      // Filter out .gitkeep files
+      const filteredFiles = (data.files || []).filter((file: FileItem) => !isGitKeepFile(file.name))
+      setFiles(filteredFiles)
       setFolders(data.folders || [])
     } catch (error) {
       console.error("Error fetching files and folders:", error)

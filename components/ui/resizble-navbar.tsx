@@ -12,9 +12,8 @@ import React, { useRef, useState } from "react";
 
 
 interface NavbarProps {
-  children?: React.ReactNode;
+  children: React.ReactNode;
   className?: string;
-  routes: { name: string; path: string }[];
 }
 
 interface NavBodyProps {
@@ -50,7 +49,7 @@ interface MobileNavMenuProps {
   onClose: () => void;
 }
 
-export const Navbar = ({ children, className, routes }: NavbarProps) => {
+export const Navbar = ({ children, className }: NavbarProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({
     target: ref,
@@ -72,10 +71,14 @@ export const Navbar = ({ children, className, routes }: NavbarProps) => {
       // IMPORTANT: Change this to class of `fixed` if you want the navbar to be fixed
       className={cn("sticky inset-x-0 top-20 z-40 w-full", className)}
     >
-      <NavBody visible={visible}>
-        <NavItems items={routes} />
-        {children}
-      </NavBody>
+      {React.Children.map(children, (child) =>
+        React.isValidElement(child)
+          ? React.cloneElement(
+              child as React.ReactElement<{ visible?: boolean }>,
+              { visible },
+            )
+          : child,
+      )}
     </motion.div>
   );
 };

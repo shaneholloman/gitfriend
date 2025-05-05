@@ -26,7 +26,7 @@ import { useTheme } from "next-themes"
 import BadgeShine from "@/components/ui/badge-shine"
 import TextAnimatedGradient from "@/components/ui/text-animated-gradient"
 import { AnimatedBeams } from "@/components/ui/animated-beams"
-import { NavbarDemo } from "@/components/ui/navbar"
+import { Navbar } from "@/components/ui/navbar"
 
 export default function LandingPage() {
   const [email, setEmail] = useState("")
@@ -217,7 +217,7 @@ export default function LandingPage() {
       <AnimatedBeams className="z-0" />
 
       {/* Modern Navbar */}
-      <NavbarDemo transparent={true} />
+      <Navbar transparent={true} />
 
       <main className="flex-1 pt-16">
         {/* Hero Section */}
