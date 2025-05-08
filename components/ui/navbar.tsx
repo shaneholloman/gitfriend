@@ -33,7 +33,6 @@ export function Navbar() {
     { name: "AI Chat", path: "/ai-chat" },
     { name: "Generate README", path: "/generate-readme" },
     { name: "Git Mojis", path: "/git-mojis" },
-    { name: "Codebase", path: "/codebase" },
   ]
 
   return (
