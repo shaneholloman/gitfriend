@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { NextResponse } from "next/server"
+import OpenAI from "openai"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
-});
+})
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages } = await req.json()
 
     // Enhanced system message with greeting instructions
     const systemMessage = {
@@ -47,8 +47,8 @@ RESPONSE STYLE:
 - For complex topics, break down explanations into clear steps
 - When relevant, mention alternative approaches
 
-Always aim to be complete and correct. If the query is ambiguous, ask clarifying questions.`
-    };
+Always aim to be complete and correct. If the query is ambiguous, ask clarifying questions.`,
+    }
 
     const completion = await openai.chat.completions.create({
       messages: [systemMessage, ...messages],
@@ -56,46 +56,43 @@ Always aim to be complete and correct. If the query is ambiguous, ask clarifying
       temperature: 0.7, // Increased for more variability
       max_tokens: 2048,
       stream: true,
-    });
+    })
 
     // Create a streaming response
     const stream = new ReadableStream({
       async start(controller) {
-        const encoder = new TextEncoder();
-        
+        const encoder = new TextEncoder()
+
         try {
           for await (const chunk of completion) {
-            const content = chunk.choices[0]?.delta?.content || '';
-            
+            const content = chunk.choices[0]?.delta?.content || ""
+
             if (content) {
               // Format as a proper SSE message
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`))
             }
           }
-          
+
           // Send a final message to indicate the stream is complete
-          controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
-          controller.close();
+          controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
+          controller.close()
         } catch (error) {
-          console.error('Stream processing error:', error);
-          controller.error(error);
+          console.error("Stream processing error:", error)
+          controller.error(error)
         }
       },
-    });
+    })
 
     // Return a proper SSE response
     return new Response(stream, {
       headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        'Connection': 'keep-alive',
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
       },
-    });
+    })
   } catch (error) {
-    console.error('OpenAI API Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to get response from OpenAI' },
-      { status: 500 }
-    );
+    console.error("OpenAI API Error:", error)
+    return NextResponse.json({ error: "Failed to get response from OpenAI" }, { status: 500 })
   }
 }

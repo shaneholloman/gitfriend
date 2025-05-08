@@ -16,4 +16,3 @@ const InputPulseBorder = (props: InputProps) => {
 }
 
 export default InputPulseBorder
-

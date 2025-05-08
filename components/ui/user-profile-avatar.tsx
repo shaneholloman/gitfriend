@@ -1,7 +1,7 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User } from "firebase/auth"
+import type { User } from "firebase/auth"
 
 interface UserProfileAvatarProps {
   user: User | null
@@ -11,14 +11,14 @@ interface UserProfileAvatarProps {
 
 export function UserProfileAvatar({ user, className = "", size = "md" }: UserProfileAvatarProps) {
   if (!user) return null
-  
+
   // Determine size classes
   const sizeClasses = {
     sm: "h-8 w-8 text-xs",
     md: "h-10 w-10 text-sm",
-    lg: "h-12 w-12 text-base"
+    lg: "h-12 w-12 text-base",
   }
-  
+
   // Get the first letter of the user's name or email
   const getInitial = () => {
     if (user.displayName) {
@@ -34,9 +34,7 @@ export function UserProfileAvatar({ user, className = "", size = "md" }: UserPro
       {user.photoURL ? (
         <AvatarImage src={user.photoURL} alt={user.displayName || "User"} />
       ) : (
-        <AvatarFallback className="font-medium">
-          {getInitial()}
-        </AvatarFallback>
+        <AvatarFallback className="font-medium">{getInitial()}</AvatarFallback>
       )}
     </Avatar>
   )

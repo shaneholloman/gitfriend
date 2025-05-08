@@ -68,4 +68,3 @@ const ResponseStream = React.forwardRef<HTMLDivElement, ResponseStreamProps>(
 ResponseStream.displayName = "ResponseStream"
 
 export { ResponseStream }
-

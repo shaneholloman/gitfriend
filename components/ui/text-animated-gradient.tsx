@@ -10,4 +10,3 @@ const TextAnimatedGradient = ({ children, className = "" }: { children: React.Re
 }
 
 export default TextAnimatedGradient
-
