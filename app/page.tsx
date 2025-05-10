@@ -1218,9 +1218,7 @@ export default function LandingPage() {
                       className="overflow-hidden"
                     >
                       <p className="pl-6 pr-2 py-4 text-muted-foreground">
-                        Git Friend offers a free tier with basic features, perfect for individual developers. We also
-                        have Pro and Team plans with advanced features, priority support, and team collaboration tools.
-                        Visit our pricing page for detailed information.
+                        Git Friend offers a free tier with basic features, perfect for individual developers. But in future we might add subscriptions
                       </p>
                     </motion.div>
                   </AccordionContent>
