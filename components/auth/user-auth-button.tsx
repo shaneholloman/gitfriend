@@ -70,7 +70,7 @@ export function UserAuthButton() {
         className="flex items-center gap-2"
       >
         <FcGoogle className="h-4 w-4" />
-        {isSigningIn ? "Signing in..." : "Sign in with Google"}
+        {isSigningIn ? "Signing in..." : " Sign In"}
       </Button>
     </div>
   )

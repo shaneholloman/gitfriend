@@ -9,6 +9,7 @@ import { UserAuthButton } from "@/components/auth/user-auth-button"
 import { cn } from "@/lib/utils"
 import { motion, useScroll, useMotionValueEvent } from "framer-motion"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import Image from "next/image"
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -60,8 +61,8 @@ export function Navbar() {
         )}
       >
         <div className="flex items-center z-10">
-          <Link href="/" className="flex items-center">
-            <span className="font-bold text-lg">GitFriend</span>
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/gitfriend-icon.png" alt="GitFriend Logo" width={28} height={28} />
           </Link>
         </div>
 
@@ -80,7 +81,7 @@ export function Navbar() {
           ))}
         </motion.div>
 
-        <div className="flex items-center gap-2 z-10">
+        <div className={`flex items-center z-10 ${visible ? "gap-1" : "gap-4"}`}>
           <ThemeToggle />
           <UserAuthButton />
         </div>
