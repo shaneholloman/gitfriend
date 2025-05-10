@@ -1,9 +1,13 @@
 # Git-Friend
 
 <p align="center">
+  <img src="/image.jpg" alt="GitFriend Logo" width="300">
+</p>
+<p align="center">
   <img src="https://img.shields.io/badge/status-active-success.svg" alt="Status">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome">
 </p>
+
 
 Welcome to GitFriend! 🎉
 Your AI-powered GitHub assistant, designed to make managing your repositories easier and more efficient than ever before.
