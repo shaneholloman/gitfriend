@@ -1,7 +1,7 @@
 # Git-Friend
 
 <p align="center">
-  <img src="/image.jpg" alt="GitFriend Logo" width="300">
+  <img src="public/image.jpg" >
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/status-active-success.svg" alt="Status">
