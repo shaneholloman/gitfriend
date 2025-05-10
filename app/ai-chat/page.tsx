@@ -296,21 +296,27 @@ export default function AIChat() {
             {showWelcome ? (
               <div className="container max-w-full mx-auto px-4 md:px-8">
                 <div className="text-center mb-10">
-                  <div className="inline-flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 mb-6 relative">
-                    <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl"></div>
-                    <GitGraph className="h-12 w-12 text-primary relative z-10" />
+                  <div className="flex items-center justify-center gap-6 mb-8">
+                    
+                    <div className="text-left">
+                      <h1 className="text-4xl font-bold text-foreground">
+                        Git Friend <span className="text-primary">AI Assistant</span>
+                      </h1>
+                      <p className="text-xl text-muted-foreground mt-2">
+                        Your personal Git and GitHub expert
+                      </p>
+                    </div>
                   </div>
-                  <h1 className="text-4xl font-bold mb-4 text-foreground">
-                    Git Friend <span className="text-primary">AI Assistant</span>
-                  </h1>
-                  <p className="text-xl text-muted-foreground max-w-lg mx-auto">
-                    Your personal Git and GitHub expert. Ask anything about version control and get instant, accurate
-                    answers.
-                  </p>
+                  <div className="max-w-2xl mx-auto bg-muted/50 rounded-xl p-6 backdrop-blur-sm">
+                    <p className="text-lg text-muted-foreground">
+                      Ask anything about version control and get instant, accurate answers. 
+                      From basic Git commands to complex GitHub workflows, I'm here to help you 
+                      master your version control journey.
+                    </p>
+                  </div>
                 </div>
 
-                {/* Redesigned suggestion cards - 2x2 grid */}
-                <div className="max-w-3xl mx-auto mt-12">
+                <div className="max-w-3xl mx-auto mt-12 pb-32">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {suggestionCards.map((card, index) => (
                       <motion.div
@@ -577,43 +583,8 @@ export default function AIChat() {
                           >
                             <ArrowUp className="h-5 w-5 text-white" />
                           </Button>
-                        ) : (
+                        ) :(
                           <>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
-                                  >
-                                    <Mic className="h-5 w-5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Voice input (coming soon)</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
-                                  >
-                                    <Sparkles className="h-5 w-5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>AI suggestions</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
                           </>
                         )}
                       </div>

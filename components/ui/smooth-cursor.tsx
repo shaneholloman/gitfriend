@@ -136,16 +136,17 @@ export function SmoothCursor({
       const element = document.elementFromPoint(e.clientX, e.clientY);
       
       if (element) {
-        // Check if the element or any of its parents is a link or button
+        // Check if the element or any of its parents is a link, button, or input
         const isClickable = element.closest('a, button, [role="button"], input[type="submit"], input[type="button"], .clickable, [onclick]') !== null;
+        const isInput = element.closest('input, textarea, [contenteditable="true"]') !== null;
         
         // Update state if changed
-        if (isClickable !== isHoveringClickable) {
-          setIsHoveringClickable(isClickable);
+        if (isClickable !== isHoveringClickable || isInput) {
+          setIsHoveringClickable(isClickable || isInput);
           
-          // Show/hide cursor based on whether we're hovering a clickable element
-          if (isClickable) {
-            document.body.style.cursor = "pointer";
+          // Show/hide cursor based on whether we're hovering a clickable element or input
+          if (isClickable || isInput) {
+            document.body.style.cursor = isInput ? "text" : "pointer";
             opacity.set(0); // Hide custom cursor
           } else {
             document.body.style.cursor = "none";
@@ -213,6 +214,7 @@ export function SmoothCursor({
 
   return (
     <motion.div
+      data-smooth-cursor
       style={{
         position: "fixed",
         left: cursorX,
@@ -225,6 +227,7 @@ export function SmoothCursor({
         zIndex: 100,
         pointerEvents: "none",
         willChange: "transform",
+        transition: "opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
       initial={{ scale: 0 }}
       animate={{ scale: 1 }}
