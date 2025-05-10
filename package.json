@@ -54,6 +54,7 @@
     "firebase": "latest",
     "firebase-admin": "latest",
     "framer-motion": "latest",
+    "groq-sdk": "^0.21.0",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "marked": "latest",

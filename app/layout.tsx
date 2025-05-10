@@ -4,7 +4,9 @@ import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/auth-context"
 import { Analytics } from "@vercel/analytics/next"
-import { cn } from "@/lib/utils"
+import { Toaster } from "@/components/ui/toaster"
+import { SmoothCursor } from "@/components/ui/smooth-cursor"
+import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -21,10 +23,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-background font-sans antialiased")} suppressHydrationWarning>
+      <body className={inter.className}>
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            {children}
+          <SmoothCursor />
+            <Suspense>{children}</Suspense>
+            <Toaster />
           </ThemeProvider>
         </AuthProvider>
         <Analytics />

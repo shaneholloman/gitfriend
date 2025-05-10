@@ -451,21 +451,6 @@ export default function GenerateReadme() {
                       <span className="text-xl font-medium">Generate Your README</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-[hsl(var(--readme-text-muted))]">Pro Features</span>
-                      <button
-                        className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors ${
-                          isPro ? "bg-[hsl(var(--readme-primary))]" : "bg-[hsl(var(--readme-border))]"
-                        }`}
-                        onClick={() => setIsPro(!isPro)}
-                      >
-                        <motion.div
-                          className="w-4 h-4 rounded-full bg-white"
-                          animate={{ x: isPro ? 6 : 0 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        />
-                      </button>
-                    </div>
                   </div>
 
                   <p className="text-[hsl(var(--readme-text-muted))] text-sm mb-6">

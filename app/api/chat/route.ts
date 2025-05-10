@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
-import OpenAI from "openai"
+import { Groq } from 'groq-sdk'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+// Initialize Groq
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY!,
 })
 
 export async function POST(req: Request) {
@@ -50,12 +51,14 @@ RESPONSE STYLE:
 Always aim to be complete and correct. If the query is ambiguous, ask clarifying questions.`,
     }
 
-    const completion = await openai.chat.completions.create({
+    const completion = await groq.chat.completions.create({
       messages: [systemMessage, ...messages],
-      model: "gpt-3.5-turbo",
-      temperature: 0.7, // Increased for more variability
-      max_tokens: 2048,
+      model: "llama3-8b-8192",
+      temperature: 0.7,
+      max_completion_tokens: 2048,
+      top_p: 1,
       stream: true,
+      stop: null
     })
 
     // Create a streaming response
@@ -92,7 +95,7 @@ Always aim to be complete and correct. If the query is ambiguous, ask clarifying
       },
     })
   } catch (error) {
-    console.error("OpenAI API Error:", error)
-    return NextResponse.json({ error: "Failed to get response from OpenAI" }, { status: 500 })
+    console.error("Groq API Error:", error)
+    return NextResponse.json({ error: "Failed to get response from Groq" }, { status: 500 })
   }
 }

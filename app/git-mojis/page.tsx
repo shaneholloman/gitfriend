@@ -2,6 +2,7 @@
 
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { UserAuthButton } from "@/components/auth/user-auth-button"
+import { Navbar } from "@/components/ui/navbar"
 
 // Import the existing component code
 import { useState } from "react"
@@ -81,43 +82,8 @@ export default function GitMojis() {
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container flex h-16 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Link href="/" className="flex items-center gap-2">
-                <GitBranch className="h-6 w-6" />
-                <span className="text-xl font-bold">Git Friend</span>
-              </Link>
-            </div>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium hover:text-primary transition-colors">
-                Home
-              </Link>
-              <Link href="/ai-chat" className="text-sm font-medium hover:text-primary transition-colors">
-                AI Chat
-              </Link>
-              <Link href="/generate-readme" className="text-sm font-medium hover:text-primary transition-colors">
-                Generate Readme
-              </Link>
-              <Link href="/git-mojis" className="text-sm font-medium text-primary transition-colors">
-                Git Mojis
-              </Link>
-            </nav>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                aria-label="Toggle theme"
-              >
-                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              </Button>
-              <UserAuthButton />
-            </div>
-          </div>
-        </header>
-
+        <Navbar />
+        
         <main className="flex-1">
           <div className="container max-w-6xl mx-auto py-8">
             <div className="mb-8">

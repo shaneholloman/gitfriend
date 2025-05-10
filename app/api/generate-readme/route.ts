@@ -1,10 +1,11 @@
 import { Octokit } from "@octokit/rest"
-import OpenAI from "openai"
+import { Groq } from 'groq-sdk'
 import { type NextRequest, NextResponse } from "next/server"
 import { redis, CACHE_KEYS, CACHE_TTL, type ReadmeGenerationStatus } from "@/lib/redis"
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+// Initialize Groq
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY!,
 })
 
 const octokit = new Octokit({
@@ -275,14 +276,17 @@ ${customInstructions ? `# Additional User Instructions\n${customInstructions}` :
 Return only the final README.md content in Markdown format, no explanation or additional headers. Make sure to include Unicode emojis directly in the text, not as emoji codes.
 `
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+    const completion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: basePrompt },
         { role: "user", content: "Generate the complete README.md file with Unicode emojis." },
       ],
-      temperature: 0.7,
-      max_tokens: 2500,
+      model: "llama3-8b-8192",
+      temperature: 1,
+      max_completion_tokens: 2500,
+      top_p: 1,
+      stream: false,
+      stop: null
     })
 
     const generatedReadme = completion.choices[0]?.message?.content
@@ -300,10 +304,7 @@ Return only the final README.md content in Markdown format, no explanation or ad
     return generatedReadme
   } catch (error) {
     console.error("Error generating README:", error)
-
-    // Update status to failed
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "failed", { ex: CACHE_TTL.STATUS })
-
     throw error
   }
 }

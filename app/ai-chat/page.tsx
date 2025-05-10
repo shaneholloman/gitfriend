@@ -1,15 +1,13 @@
 "use client"
 
 import type React from "react"
+
 import { useState, useRef, useEffect } from "react"
 import {
   ArrowUp,
   Copy,
   Check,
-  Sun,
-  Moon,
   Mic,
-  Search,
   GitBranch,
   GitMerge,
   GitPullRequest,
@@ -19,19 +17,25 @@ import {
   GitGraph,
   ThumbsUp,
   ThumbsDown,
+  Sparkles,
+  CornerDownLeft,
 } from "lucide-react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
-import { useTheme } from "next-themes"
 import { format } from "date-fns"
-import { Message, MessageAvatar, MessageContent, MessageActions, MessageAction } from "@/components/ui/message"
 import { SuggestionCard } from "@/components/ui/suggestion-card"
 import Image from "next/image"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { UserAuthButton } from "@/components/auth/user-auth-button"
+import { Navbar } from "@/components/ui/navbar"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
+import { useMobile } from "@/hooks/use-mobile"
+import ReactMarkdown from "react-markdown"
+
 
 type ChatMessage = {
   role: "user" | "assistant"
@@ -47,7 +51,7 @@ type SuggestionCardProps = {
   description: string
   prompt: string
   color: string
-  keywords: string[] // Add keywords for filtering
+  keywords: string[]
 }
 
 export default function AIChat() {
@@ -85,22 +89,25 @@ export default function AIChat() {
       keywords: ["commit", "message", "best practice", "git commit"],
     },
   ]
+
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [streamContent, setStreamContent] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { theme, setTheme } = useTheme()
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const [showWelcome, setShowWelcome] = useState(true)
   const inputRef = useRef<HTMLInputElement>(null)
   const [filteredSuggestions, setFilteredSuggestions] = useState<SuggestionCardProps[]>(suggestionCards)
+  const [isInputFocused, setIsInputFocused] = useState(false)
+  const { toast } = useToast()
+  const isMobile = useMobile()
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  }, [messages, streamContent])
 
   // Hide welcome screen when there are messages
   useEffect(() => {
@@ -200,6 +207,11 @@ export default function AIChat() {
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
     setCopiedId(id)
+    toast({
+      title: "Copied to clipboard",
+      description: "The message has been copied to your clipboard.",
+      duration: 2000,
+    })
     setTimeout(() => setCopiedId(null), 2000)
   }
 
@@ -215,88 +227,18 @@ export default function AIChat() {
         return message
       }),
     )
+
+    toast({
+      title: type === "like" ? "Feedback: Helpful" : "Feedback: Not Helpful",
+      description: "Thank you for your feedback!",
+      duration: 2000,
+    })
   }
 
   const handleSuggestionClick = async (prompt: string) => {
-    const userMessage: ChatMessage = {
-      role: "user",
-      content: prompt,
-      id: Date.now().toString(),
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setIsLoading(true)
-    setStreamContent("") // Clear any previous streaming content
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: [{ role: "user", content: prompt }],
-        }),
-      })
-
-      if (!response.ok) throw new Error("Failed to fetch response")
-
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error("Response body is null")
-
-      let accumulatedContent = ""
-
-      const processStream = async () => {
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            const chunkText = new TextDecoder().decode(value)
-            const lines = chunkText.split("\n\n")
-
-            for (const line of lines) {
-              if (!line.trim() || !line.startsWith("data:")) continue
-
-              const data = line.replace("data:", "").trim()
-              if (data === "[DONE]") break
-
-              try {
-                const parsed = JSON.parse(data)
-                if (parsed.content) {
-                  accumulatedContent += parsed.content
-                  setStreamContent(accumulatedContent)
-                }
-              } catch (e) {
-                console.error("Error parsing JSON from stream:", e, data)
-              }
-            }
-          }
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: accumulatedContent,
-              id: Date.now().toString(),
-              timestamp: new Date(),
-              feedback: null,
-            },
-          ])
-
-          setIsLoading(false)
-        } catch (error) {
-          console.error("Error processing stream:", error)
-          setIsLoading(false)
-        }
-      }
-
-      processStream()
-    } catch (error) {
-      console.error("Error fetching response:", error)
-      setIsLoading(false)
+    setInput(prompt)
+    if (inputRef.current) {
+      inputRef.current.focus()
     }
   }
 
@@ -329,62 +271,24 @@ export default function AIChat() {
     return format(date, "h:mm a")
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit(e as unknown as React.FormEvent)
+    }
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen flex-col bg-background text-foreground transition-colors duration-300">
-        <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
-          <div className="container max-w-full mx-auto px-4 md:px-8 flex h-16 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Link href="/" className="flex items-center gap-2">
-                <GitBranch className="h-6 w-6 text-purple-500" />
-                <span className="text-xl font-bold">Git Friend</span>
-              </Link>
-            </div>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link
-                href="/"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Home
-              </Link>
-              <Link href="/ai-chat" className="text-sm font-medium text-primary transition-colors">
-                AI Chat
-              </Link>
-              <Link
-                href="/generate-readme"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Generate Readme
-              </Link>
-              <Link
-                href="/git-mojis"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Git Mojis
-              </Link>
-            </nav>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                aria-label="Toggle theme"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              </Button>
-              <UserAuthButton />
-            </div>
-          </div>
-        </header>
+        <Navbar />
 
-        <main className="flex-1 flex flex-col relative">
+        <main className="flex-1 flex flex-col relative pt-24">
           {/* Chat messages area */}
           <div
             ref={chatContainerRef}
             className={cn(
-              "flex-1 overflow-y-auto pb-40",
+              "flex-1 overflow-y-auto pb-32 md:pb-40",
               showWelcome ? "flex items-center justify-center" : "",
               "bg-background",
             )}
@@ -397,83 +301,106 @@ export default function AIChat() {
                     <GitGraph className="h-12 w-12 text-primary relative z-10" />
                   </div>
                   <h1 className="text-4xl font-bold mb-4 text-foreground">
-                    Git Friend <span className="text-primary">+ AI</span>
+                    Git Friend <span className="text-primary">AI Assistant</span>
                   </h1>
                   <p className="text-xl text-muted-foreground max-w-lg mx-auto">
-                    Powered by AI's ultra-fast LLM. Ask anything about Git and GitHub with lightning-fast responses!
+                    Your personal Git and GitHub expert. Ask anything about version control and get instant, accurate
+                    answers.
                   </p>
                 </div>
 
                 {/* Redesigned suggestion cards - 2x2 grid */}
-                <div className="max-w-2xl mx-auto mt-12">
+                <div className="max-w-3xl mx-auto mt-12">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {suggestionCards.map((card, index) => (
-                      <SuggestionCard
+                      <motion.div
                         key={index}
-                        icon={card.icon}
-                        title={card.title}
-                        description={card.description}
-                        onClick={() => handleSuggestionClick(card.prompt)}
-                      />
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                      >
+                        <SuggestionCard
+                          icon={card.icon}
+                          title={card.title}
+                          description={card.description}
+                          onClick={() => handleSuggestionClick(card.prompt)}
+                        />
+                      </motion.div>
                     ))}
                   </div>
+
+                  <motion.div
+                    className="mt-12 text-center"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.5 }}
+                  >
+                    <p className="text-muted-foreground mb-4">Or type your own question below</p>
+                    <div className="flex justify-center">
+                      <motion.div
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5 }}
+                      >
+                        <CornerDownLeft className="h-6 w-6 text-primary" />
+                      </motion.div>
+                    </div>
+                  </motion.div>
                 </div>
               </div>
             ) : (
-              <div className="container max-w-full mx-auto px-4 md:px-8 py-6">
+              <div className="container max-w-4xl mx-auto px-4 md:px-8 py-6">
                 <div className="space-y-6">
-                  {messages.map((message) => (
+                  {messages.map((message, index) => (
                     <motion.div
                       key={message.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
+                      className={cn("group", message.role === "user" ? "flex justify-end" : "flex justify-start")}
                     >
-                      <Message
-                        align={message.role === "user" ? "end" : "start"}
-                        avatar={
-                          message.role === "assistant" ? (
-                            <MessageAvatar
-                              className="hidden" // Hide avatar for cleaner look
-                              fallback="AI"
-                            />
-                          ) : (
-                            <MessageAvatar
-                              className="hidden" // Hide avatar for cleaner look
-                              fallback="You"
-                            />
-                          )
-                        }
+                      <div
+                        className={cn(
+                          "max-w-[85%] md:max-w-[75%]",
+                          message.role === "user" ? "flex flex-col items-end" : "flex flex-col items-start",
+                        )}
                       >
-                        <div className="flex flex-col">
+                        <div className="flex items-center mb-1 text-xs text-muted-foreground">
                           {message.role === "user" ? (
-                            // User message
-                            <div className="flex flex-col items-end">
-                              <div className="flex items-center mb-1 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {formatMessageTime(message.timestamp)}
-                              </div>
-                              <MessageContent className="bg-[#8b5cf6] text-white rounded-2xl rounded-tr-sm shadow-sm">
-                                {message.content}
-                              </MessageContent>
+                            <>
+                              <Clock className="h-3 w-3 mr-1" />
+                              {formatMessageTime(message.timestamp)}
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-medium mr-1">Git Friend</span> •{" "}
+                              {formatMessageTime(message.timestamp)}
+                            </>
+                          )}
+                        </div>
+
+                        <div
+                          className={cn(
+                            "px-4 py-3 rounded-2xl shadow-sm",
+                            message.role === "user"
+                              ? "bg-primary text-white rounded-tr-sm"
+                              : "bg-card border border-border rounded-tl-sm",
+                          )}
+                        >
+                          {message.role === "assistant" ? (
+                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
                             </div>
                           ) : (
-                            // AI message
-                            <div className="flex flex-col">
-                              <div className="flex items-center mb-1 text-xs text-muted-foreground">
-                                <span className="font-medium mr-1">Git Friend</span> •{" "}
-                                {formatMessageTime(message.timestamp)}
-                              </div>
-                              <MessageContent
-                                className="bg-[#f9fafb] dark:bg-[#1f2937] border border-[#e5e7eb] dark:border-[#374151] rounded-2xl rounded-tl-sm shadow-sm"
-                                markdown={true}
-                              >
-                                {message.content}
-                              </MessageContent>
+                            <div className="whitespace-pre-wrap">{message.content}</div>
+                          )}
+                        </div>
 
-                              <div className="flex justify-end mt-2">
-                                <MessageActions>
-                                  <MessageAction tooltip="Copy to clipboard">
+                        {message.role === "assistant" && (
+                          <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-1">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
                                     <Button
                                       variant="ghost"
                                       size="icon"
@@ -486,9 +413,16 @@ export default function AIChat() {
                                         <Copy className="h-4 w-4" />
                                       )}
                                     </Button>
-                                  </MessageAction>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Copy to clipboard</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
 
-                                  <MessageAction tooltip="Helpful">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
                                     <Button
                                       variant="ghost"
                                       size="icon"
@@ -502,29 +436,39 @@ export default function AIChat() {
                                     >
                                       <ThumbsUp className="h-4 w-4" />
                                     </Button>
-                                  </MessageAction>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Helpful</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
 
-                                  <MessageAction tooltip="Not helpful">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
                                     <Button
                                       variant="ghost"
                                       size="icon"
                                       className={cn(
                                         "h-8 w-8 rounded-full",
                                         message.feedback === "dislike"
-                                          ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                                                                                  ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
                                           : "text-muted-foreground hover:text-foreground hover:bg-muted",
                                       )}
                                       onClick={() => handleFeedback(message.id, "dislike")}
                                     >
                                       <ThumbsDown className="h-4 w-4" />
                                     </Button>
-                                  </MessageAction>
-                                </MessageActions>
-                              </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Not helpful</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
-                          )}
-                        </div>
-                      </Message>
+                          </div>
+                        )}
+                      </div>
                     </motion.div>
                   ))}
 
@@ -534,27 +478,27 @@ export default function AIChat() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
+                      className="flex justify-start"
                     >
-                      <Message align="start">
-                        <div className="flex flex-col">
-                          <div className="flex items-center mb-1 text-xs text-muted-foreground">
-                            <span className="font-medium mr-1">Git Friend</span> • {formatMessageTime(new Date())}
-                          </div>
-                          <MessageContent
-                            className="bg-[#f9fafb] dark:bg-[#1f2937] border border-[#e5e7eb] dark:border-[#374151] rounded-2xl rounded-tl-sm shadow-sm"
-                            markdown={!!streamContent}
-                          >
-                            {streamContent || (
-                              <div className="flex items-center gap-2">
-                                <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-                                  <Zap className="h-3 w-3 text-primary" />
-                                </div>
-                                <span className="text-sm text-muted-foreground">AI is thinking...</span>
-                              </div>
-                            )}
-                          </MessageContent>
+                      <div className="max-w-[85%] md:max-w-[75%] flex flex-col items-start">
+                        <div className="flex items-center mb-1 text-xs text-muted-foreground">
+                          <span className="font-medium mr-1">Git Friend</span> • {formatMessageTime(new Date())}
                         </div>
-                      </Message>
+                        <div className="px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm bg-card border border-border">
+                          {streamContent ? (
+                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                              <ReactMarkdown>{streamContent}</ReactMarkdown>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+                                <Zap className="h-3 w-3 text-primary" />
+                              </div>
+                              <span className="text-sm text-muted-foreground">AI is thinking...</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </motion.div>
                   )}
 
@@ -565,115 +509,165 @@ export default function AIChat() {
           </div>
 
           {/* Fixed input at the bottom */}
-          <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 bg-background border-t border-border shadow-lg">
-            <div className="container max-w-3xl mx-auto px-4 md:px-0">
+          <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 bg-background/80 backdrop-blur-xl border-t border-border shadow-lg">
+            <div className="container max-w-4xl mx-auto px-4 md:px-0">
               <form onSubmit={handleSubmit} className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  <div className="relative w-8 h-8 flex items-center justify-center">
-                    <Image
-                      src="/gitfriend-icon.png"
-                      alt="GitFriend AI"
-                      z-index="1"
-                      width={100}
-                      height={100}
-                      className="object-contain"
-                    />
-                  </div>
-                </div>
-                <div className="rounded-xl border border-input shadow-sm overflow-hidden bg-background transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 focus-within:opacity-100 transition-opacity"></div>
-                  <Input
-                    ref={inputRef}
-                    value={input}
-                    onChange={handleInputChange}
-                    placeholder="Ask AI about Git or GitHub..."
-                    className="border-0 pl-16 pr-12 py-6 text-base focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-foreground relative z-10"
-                    disabled={isLoading}
-                  />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 z-10">
-                    {input.trim() ? (
-                      <Button
-                        type="submit"
-                        size="icon"
-                        className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 transition-colors"
+                <Card
+                  className={cn(
+                    "overflow-hidden transition-all duration-200",
+                    isInputFocused ? "ring-2 ring-primary/50" : "",
+                  )}
+                >
+                  <CardContent className="p-0">
+                    <div className="relative">
+
+                      <Input
+                        ref={inputRef}
+                        value={input}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                        onFocus={() => setIsInputFocused(true)}
+                        onBlur={() => setIsInputFocused(false)}
+                        placeholder="Ask about Git or GitHub..."
+                        className="border-0 pl-16 pr-12 py-6 text-base focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                         disabled={isLoading}
-                      >
-                        <ArrowUp className="h-5 w-5 text-white" />
-                      </Button>
-                    ) : (
-                      <>
-                        <Mic className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
-                        <Search className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-foreground transition-colors ml-1" />
-                      </>
-                    )}
-                  </div>
-                </div>
+                      />
+
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        {input.trim() ? (
+                          <Button
+                            type="submit"
+                            size="icon"
+                            className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 transition-colors"
+                            disabled={isLoading}
+                          >
+                            <ArrowUp className="h-5 w-5 text-white" />
+                          </Button>
+                        ) : (
+                          <>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  >
+                                    <Mic className="h-5 w-5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Voice input (coming soon)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  >
+                                    <Sparkles className="h-5 w-5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>AI suggestions</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </form>
 
               {!showWelcome && (
-                <div className="mt-4">
-                  {input.trim() && filteredSuggestions.length > 0 && (
-                    <div className="mb-2 text-xs text-muted-foreground">Suggestions based on your input:</div>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {input.trim() ? (
-                      filteredSuggestions.length > 0 ? (
-                        filteredSuggestions.slice(0, 3).map((suggestion, index) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="group"
-                          >
-                            <Button
+                <AnimatePresence>
+                  {(input.trim() || !isMobile) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-3 overflow-hidden"
+                    >
+                      <div className="flex flex-wrap gap-2">
+                        {input.trim() ? (
+                          filteredSuggestions.length > 0 ? (
+                            <>
+                              <div className="w-full mb-1 text-xs text-muted-foreground">
+                                Suggestions based on your input:
+                              </div>
+                              {filteredSuggestions.slice(0, 3).map((suggestion, index) => (
+                                <motion.div
+                                  key={index}
+                                  initial={{ opacity: 0, scale: 0.9 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  className="group"
+                                >
+                                  <Badge
+                                    variant="outline"
+                                    className="cursor-pointer hover:bg-muted transition-colors border-input hover:border-primary flex items-center gap-1.5 group-hover:border-primary text-foreground py-1.5"
+                                    onClick={() => handleSuggestionClick(suggestion.prompt)}
+                                  >
+                                    <span className="h-4 w-4 rounded-full flex items-center justify-center bg-primary/10 text-primary">
+                                      {suggestion.icon}
+                                    </span>
+                                    {suggestion.title}
+                                  </Badge>
+                                </motion.div>
+                              ))}
+                            </>
+                          ) : (
+                            <div className="text-xs text-muted-foreground py-1">
+                              No matching suggestions. Press Enter to send your message.
+                            </div>
+                          )
+                        ) : (
+                          <>
+                            <div className="w-full mb-1 text-xs text-muted-foreground">Quick suggestions:</div>
+                            <Badge
                               variant="outline"
-                              size="sm"
-                              className="rounded-full text-xs bg-background hover:bg-muted transition-colors border-input hover:border-primary flex items-center gap-1.5 group-hover:border-primary text-foreground"
-                              onClick={() => handleSuggestionClick(suggestion.prompt)}
-                              disabled={isLoading}
+                              className="cursor-pointer hover:bg-muted transition-colors border-input hover:border-primary flex items-center gap-1.5 text-foreground py-1.5"
+                              onClick={() => handleSuggestionClick("How do I create a branch in Git?")}
                             >
                               <span className="h-4 w-4 rounded-full flex items-center justify-center bg-primary/10 text-primary">
-                                {suggestion.icon}
+                                <GitBranch className="h-3 w-3" />
                               </span>
-                              {suggestion.title}
-                            </Button>
-                          </motion.div>
-                        ))
-                      ) : (
-                        <div className="text-xs text-muted-foreground py-1">
-                          No matching suggestions. Press Enter to send your message.
-                        </div>
-                      )
-                    ) : (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full text-xs bg-background hover:bg-muted transition-colors border-input hover:border-primary flex items-center gap-1.5 text-foreground"
-                          onClick={() => handleSuggestionClick("How do I create a branch in Git?")}
-                          disabled={isLoading}
-                        >
-                          <span className="h-4 w-4 rounded-full flex items-center justify-center bg-primary/10 text-primary">
-                            <GitBranch className="h-3 w-3" />
-                          </span>
-                          Create a branch
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full text-xs bg-background hover:bg-muted transition-colors border-input hover:border-primary flex items-center gap-1.5 text-foreground"
-                          onClick={() => handleSuggestionClick("How do I resolve merge conflicts?")}
-                          disabled={isLoading}
-                        >
-                          <span className="h-4 w-4 rounded-full flex items-center justify-center bg-primary/10 text-primary">
-                            <GitMerge className="h-3 w-3" />
-                          </span>
-                          Resolve conflicts
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
+                              Create a branch
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className="cursor-pointer hover:bg-muted transition-colors border-input hover:border-primary flex items-center gap-1.5 text-foreground py-1.5"
+                              onClick={() => handleSuggestionClick("How do I resolve merge conflicts?")}
+                            >
+                              <span className="h-4 w-4 rounded-full flex items-center justify-center bg-primary/10 text-primary">
+                                <GitMerge className="h-3 w-3" />
+                              </span>
+                              Resolve conflicts
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className="cursor-pointer hover:bg-muted transition-colors border-input hover:border-primary flex items-center gap-1.5 text-foreground py-1.5"
+                              onClick={() => handleSuggestionClick("What's the best way to create a pull request?")}
+                            >
+                              <span className="h-4 w-4 rounded-full flex items-center justify-center bg-primary/10 text-primary">
+                                <GitPullRequest className="h-3 w-3" />
+                              </span>
+                              Create pull request
+                            </Badge>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               )}
             </div>
           </div>
@@ -682,3 +676,4 @@ export default function AIChat() {
     </ProtectedRoute>
   )
 }
+
