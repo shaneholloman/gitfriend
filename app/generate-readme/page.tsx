@@ -71,7 +71,7 @@ export default function GenerateReadme() {
   // Example repositories
   const exampleRepos = [
     { name: "React", owner: "facebook/react", icon: <Code className="h-5 w-5" /> },
-    { name: "Next.js", owner: "vercel/next.js", icon: <Zap className="h-5 w-5" /> },
+    { name: "GitFriend", owner: "krishn404/Git-Friend", icon: <Zap className="h-5 w-5" /> },
     { name: "TailwindCSS", owner: "tailwindlabs/tailwindcss", icon: <Sparkles className="h-5 w-5" /> },
   ]
 
