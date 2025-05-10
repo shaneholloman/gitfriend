@@ -388,7 +388,24 @@ export default function AIChat() {
                         >
                           {message.role === "assistant" ? (
                             <div className="prose prose-sm max-w-none dark:prose-invert">
-                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                              <ReactMarkdown
+                                components={{
+                                  a: ({ node, ...props }) => (
+                                    <Badge
+                                      variant="outline"
+                                      className="inline-flex items-center gap-1.5 text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                      onClick={() => window.open(props.href, '_blank')}
+                                    >
+                                      <span className="h-3 w-3 rounded-full flex items-center justify-center bg-primary/10">
+                                        <GitBranch className="h-2 w-2" />
+                                      </span>
+                                      {props.children}
+                                    </Badge>
+                                  ),
+                                }}
+                              >
+                                {message.content}
+                              </ReactMarkdown>
                             </div>
                           ) : (
                             <div className="whitespace-pre-wrap">{message.content}</div>
@@ -487,7 +504,24 @@ export default function AIChat() {
                         <div className="px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm bg-card border border-border">
                           {streamContent ? (
                             <div className="prose prose-sm max-w-none dark:prose-invert">
-                              <ReactMarkdown>{streamContent}</ReactMarkdown>
+                              <ReactMarkdown
+                                components={{
+                                  a: ({ node, ...props }) => (
+                                    <Badge
+                                      variant="outline"
+                                      className="inline-flex items-center gap-1.5 text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                      onClick={() => window.open(props.href, '_blank')}
+                                    >
+                                      <span className="h-3 w-3 rounded-full flex items-center justify-center bg-primary/10">
+                                        <GitBranch className="h-2 w-2" />
+                                      </span>
+                                      {props.children}
+                                    </Badge>
+                                  ),
+                                }}
+                              >
+                                {streamContent}
+                              </ReactMarkdown>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
