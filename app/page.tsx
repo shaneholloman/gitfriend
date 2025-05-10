@@ -1241,11 +1241,11 @@ export default function LandingPage() {
                 <span className="text-lg font-medium tracking-tight">Git Friend</span>
               </div>
               <p className="text-sm text-muted-foreground/90 max-w-xs leading-relaxed">
-                Git Friend simplifies Git workflows, making version control intuitive and collaborative for developers
-                of all skill levels.
-              </p>
+                Git Friend is a tool that helps beginners to learn and understand git and github related issues and helps them to solve their issues through AI Chat.
+                This tool is also helps to generate README.md file for your projects which saves your time and effort.
+                </p>
               <Link
-                href="https://github.com/krishn404/markgit"
+                href="https://github.com/krishn404/Git-Friend"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-muted-foreground/70 hover:text-foreground transition-all duration-300"
@@ -1270,20 +1270,7 @@ export default function LandingPage() {
 
             {/* Navigation */}
             <div className="flex flex-col items-center md:items-end gap-4">
-              <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground/80">
-                <Link href="/about" className="hover:text-foreground transition">
-                  About
-                </Link>
-                <Link href="/features" className="hover:text-foreground transition">
-                  Features
-                </Link>
-                <Link href="/docs" className="hover:text-foreground transition">
-                  Docs
-                </Link>
-                <Link href="/contact" className="hover:text-foreground transition">
-                  Contact
-                </Link>
-              </div>
+              
               <p className="text-xs text-muted-foreground/60 mt-2">
                 © {new Date().getFullYear()} Git Friend. All rights reserved.
               </p>
