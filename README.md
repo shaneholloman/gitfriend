@@ -164,28 +164,68 @@ Get assistance with Git commands and best practices through the AI chat feature.
 Streamline the process of creating and updating documentation with AI-powered README generation and formatting.
 
 
-## Contributing Guide 🤝
+# Contributing Guidelines
 
-We welcome contributions from everyone. If you're interested in contributing, please follow the below steps:
+Thank you for considering contributing to this project! To keep things organized and collaborative, please follow the steps below when contributing:
 
-1. Fork the repository.
-2. Create a new branch on your forked repository:
+---
+
+## 🐛 Reporting Issues & Proposing Features
+
+Before starting any work, contributors **must raise an issue** and follow the issue template.
+
+### ✅ Issue Template
+
+When creating an issue, please include the following:
+
+* **Title**: Concise summary (e.g., `Fix broken login redirect`)
+* **Type**: Bug report / Feature request / Improvement
+* **Description**:
+
+  * What is the bug, error, or issue?
+  * Where did you encounter it?
+  * Any relevant logs, screenshots, or screen recordings?
+* **Proposed Solution**:
+
+  * How do you plan to fix or implement it?
+  * Any tools, libraries, or dependencies you intend to use?
+
+Once the issue is created, a maintainer will review it.
+
+---
+
+## 📝 Getting Assigned
+
+🚫 **Do NOT start working on any issue unless it has been assigned to you by a maintainer.**
+
+To get assigned:
+
+1. Raise a clear and descriptive issue using the template above.
+2. Comment: `I would like to work on this`.
+3. Wait for a maintainer to review and assign the issue to you.
+
+Only after assignment should you begin working on your contribution.
+
+---
+
+## 🔧 Development Workflow
+
+1. **Fork** this repository.
+2. **Clone** your fork locally:
+
    ```bash
-   git checkout -b feature/your-feature-name
+   git clone https://github.com/krishn404/Git-Friend.git
+   cd your-repo-name
    ```
-3. Make your changes on the new branch.
-4. Test your changes thoroughly.
-5. Commit your changes using Gitmoji for better visibility:
+3. Create a new branch:
+
    ```bash
-   git commit -m "✨ Add new feature"
+   git checkout -b fix/your-issue-title
    ```
-6. Push to your branch:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-7. Submit a pull request.
+4. Make your changes with clear and meaningful commits.
+5. Ensure all tests and linters pass.
+6. Push your branch and open a Pull Request referencing the issue number.
 
-Before contributing, please ensure your code adheres to the code style used throughout the project.
+---
 
-
-## 
+Thanks for helping improve this project! 🚀 and Feel free to ask questions by commenting on issues or reaching out directly on my  [mail](mailto:maharshikrishnakant.com)
