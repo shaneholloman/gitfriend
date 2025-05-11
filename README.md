@@ -228,4 +228,4 @@ Only after assignment should you begin working on your contribution.
 
 ---
 
-Thanks for helping improve this project! 🚀 and Feel free to ask questions by commenting on issues or reaching out directly on my  [mail](mailto:maharshikrishnakant.com)
+Thanks for helping improve this project! 🚀 and Feel free to ask questions by commenting on issues or reaching out directly on my  [mail](mailto:maharshikrishnakant@gmail.com)
