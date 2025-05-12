@@ -5,7 +5,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/auth-context"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/toaster"
-import { SmoothCursor } from "@/components/ui/smooth-cursor"
 import { Suspense } from "react"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -26,7 +25,6 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <SmoothCursor />
             <Suspense>{children}</Suspense>
             <Toaster />
           </ThemeProvider>
