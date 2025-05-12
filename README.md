@@ -44,6 +44,15 @@ We're constantly working to improve Git-Friend. Here are some features we're pla
 - [ ] **Custom Prompt Templates**: Save and reuse custom prompts for AI-generated content.
 - [ ] **GitHub Activity Dashboard**: Track and visualize your GitHub activity.
 - [ ] **Badges In readme**: there will be   <img src="https://img.shields.io/badge/badges-like-this.svg" alt="Status"> this 
+- [ ] **Star History** : Github repo star history 
+<!-- 
+<a href="https://www.star-history.com/#krishn404/Git-Friend&Timeline">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=krishn404/Git-Friend&type=Timeline&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=krishn404/Git-Friend&type=Timeline" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=krishn404/Git-Friend&type=Timeline" />
+ </picture>
+</a> -->
 .
 
 ## Tech Stack 💻
