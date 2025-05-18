@@ -252,6 +252,28 @@ export default function LandingPage() {
                 Git Friend simplifies complex Git workflows with AI assistance, making version control intuitive and
                 collaborative for developers of all skill levels.
               </motion.p>
+
+              {/* Product Hunt Badge */}
+              <motion.div 
+                className="mt-8 flex justify-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.6 }}
+              >
+                <a 
+                  href="https://www.producthunt.com/posts/git-friend?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-git&#0045;friend" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  <img 
+                    src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=966948&theme=neutral&t=1747547887029" 
+                    alt="Git Friend - Make git simple again | Product Hunt" 
+                    style={{ width: "250px", height: "54px" }} 
+                    width="250" 
+                    height="54" 
+                  />
+                </a>
+              </motion.div>
             </motion.div>
 
             {/* AI Chatbot Interface */}
@@ -424,24 +446,56 @@ export default function LandingPage() {
             }}
           />
 
-          {/* Star-like particles in the background for dark mode */}
-          <div className="hidden dark:block">
-            {Array.from({ length: 50 }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute bg-white rounded-full twinkle"
-                style={{
-                  width: Math.random() * 2 + 1 + "px",
-                  height: Math.random() * 2 + 1 + "px",
-                  top: Math.random() * 100 + "%",
-                  left: Math.random() * 100 + "%",
-                  opacity: Math.random() * 0.5 + 0.1,
-                  animationDelay: `${Math.random() * 5}s`,
-                  animationDuration: `${Math.random() * 3 + 2}s`,
-                }}
-              />
-            ))}
+          <div className="hidden dark:block" suppressHydrationWarning>
+            {Array.from({ length: 50 }).map((_, i) => {
+              // Use fixed values based on index
+              const width = 1 + (i % 3) * 0.5;
+              const height = 1 + ((i + 1) % 3) * 0.5;
+              const top = (i * 2) % 100;
+              const left = ((i * 3) + 10) % 100;
+              const opacity = 0.1 + (i % 5) * 0.1;
+              const delay = (i % 5) * 0.5;
+              const duration = 2 + (i % 3);
+
+              return (
+                <div
+                  key={i}
+                  className="absolute bg-white rounded-full twinkle"
+                  style={{
+                    width: `${width}px`,
+                    height: `${height}px`,
+                    top: `${top}%`,
+                    left: `${left}%`,
+                    opacity,
+                    animationDelay: `${delay}s`,
+                    animationDuration: `${duration}s`,
+                  }}
+                />
+              );
+            })}
           </div>
+
+          {/* Emoji animations */}
+          {["😊", "👍", "❤️", "🎯", "🌟"].map((emoji, i) => (
+            <motion.div
+              key={i}
+              className="absolute text-sm"
+              initial={{ opacity: 0 }}
+              animate={{
+                opacity: [0, 1, 0],
+                x: [0, (i - 2) * 20],
+                y: [0, (i - 2) * 20],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Number.POSITIVE_INFINITY,
+                delay: i * 0.5,
+              }}
+              suppressHydrationWarning
+            >
+              {emoji}
+            </motion.div>
+          ))}
 
           <motion.div
             className="container mx-auto relative"
@@ -902,33 +956,6 @@ export default function LandingPage() {
                                     >
                                       {["✨", "🚀", "🔥", "💡", "🎉"][i]}
                                     </motion.div>
-                                  </motion.div>
-                                ))}
-
-                                {/* Additional floating emojis */}
-                                {["😊", "👍", "❤️", "🎯", "🌟"].map((emoji, i) => (
-                                  <motion.div
-                                    key={`float-${i}`}
-                                    className="absolute text-sm"
-                                    initial={{
-                                      x: Math.random() * 100 - 50,
-                                      y: Math.random() * 100 - 50,
-                                      opacity: 0,
-                                    }}
-                                    animate={{
-                                      x: Math.random() * 100 - 50,
-                                      y: Math.random() * 100 - 50,
-                                      opacity: [0, 1, 0],
-                                      scale: [0.8, 1.2, 0.8],
-                                    }}
-                                    transition={{
-                                      duration: 3 + Math.random() * 2,
-                                      repeat: Number.POSITIVE_INFINITY,
-                                      delay: i * 0.8,
-                                      ease: "easeInOut",
-                                    }}
-                                  >
-                                    {emoji}
                                   </motion.div>
                                 ))}
                               </>
