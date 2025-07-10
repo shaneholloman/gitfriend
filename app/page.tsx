@@ -275,7 +275,7 @@ export default function LandingPage() {
       transition={{ delay: 0.4, duration: 0.6 }}
     >
       <a 
-        href="https://peerlist.io/git-friend" 
+        href="https://peerlist.io/krixn/project/gitfriend--git-and-github-ai-companion" 
         target="_blank" 
         rel="noopener noreferrer"
         aria-label="View Git Friend on Peerlist"
