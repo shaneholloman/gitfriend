@@ -16,8 +16,9 @@ import {
 import { UserProfileAvatar } from "@/components/ui/user-profile-avatar"
 
 export function UserAuthButton() {
-  const { user, loading, signInWithGoogle, signOut } = useAuth()
+  const { user, loading, signInWithGoogle, signOut, guestLogin } = useAuth()
   const [isSigningIn, setIsSigningIn] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   const handleSignIn = async () => {
     setIsSigningIn(true)
@@ -26,6 +27,10 @@ export function UserAuthButton() {
     } finally {
       setIsSigningIn(false)
     }
+  }
+
+  const handleGuest = () => {
+    guestLogin()
   }
 
   if (loading) {
@@ -60,18 +65,29 @@ export function UserAuthButton() {
     )
   }
 
+  // Dropdown for sign in options
   return (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleSignIn}
-        disabled={isSigningIn}
-        className="flex items-center gap-2"
-      >
-        <FcGoogle className="h-4 w-4" />
-        {isSigningIn ? "Signing in..." : " Sign In"}
-      </Button>
-    </div>
+    <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+          aria-haspopup="menu"
+        >
+          Sign In
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={handleSignIn} disabled={isSigningIn} className="gap-2">
+          <FcGoogle className="h-4 w-4" />
+          {isSigningIn ? "Signing in..." : "Sign in with Google"}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleGuest}>
+          <span role="img" aria-label="Guest" className="mr-2">👤</span>
+          Continue as Guest
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

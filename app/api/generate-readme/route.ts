@@ -121,13 +121,13 @@ export async function POST(req: NextRequest) {
 
     // Check if we already have a cached README, unless force is true
     if (!force) {
-      const cachedReadme = await redis.get(CACHE_KEYS.README_GENERATION(repoUrl))
-      if (cachedReadme) {
-        return NextResponse.json({
-          status: "completed",
-          readme: cachedReadme,
-          cached: true,
-        })
+    const cachedReadme = await redis.get(CACHE_KEYS.README_GENERATION(repoUrl))
+    if (cachedReadme) {
+      return NextResponse.json({
+        status: "completed",
+        readme: cachedReadme,
+        cached: true,
+      })
       }
     }
 
@@ -198,8 +198,8 @@ async function generateReadmeInBackground(repoUrl: string, customInstructions?: 
     if (packageJsonFile && packageJsonFile.content) {
       try {
         packageJson = JSON.parse(packageJsonFile.content)
-      } catch (e) {
-        console.error("Error parsing package.json:", e)
+        } catch (e) {
+          console.error("Error parsing package.json:", e)
       }
     }
 
