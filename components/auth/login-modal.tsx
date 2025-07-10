@@ -15,6 +15,7 @@ interface LoginModalProps {
 
 export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
   const { signInWithGoogle } = useAuth()
+  const { guestLogin } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleLogin = async () => {
@@ -27,6 +28,12 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleGuest = () => {
+    guestLogin()
+    onSuccess?.()
+    onClose()
   }
 
   if (!isOpen) return null
@@ -59,6 +66,19 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
             <FcGoogle className="h-5 w-5" />
             {isLoading ? "Signing in..." : "Sign in with Google"}
           </Button>
+          <div className="my-4 w-full flex items-center">
+            <div className="flex-grow border-t border-gray-200" />
+            <span className="mx-2 text-xs text-gray-400">or</span>
+            <div className="flex-grow border-t border-gray-200" />
+          </div>
+          <Button
+            className="w-full flex items-center justify-center gap-2 py-4 bg-gray-100 text-gray-700 hover:bg-gray-200"
+            onClick={handleGuest}
+            variant="outline"
+          >
+            <span>Continue as Guest</span>
+          </Button>
+          <p className="text-xs text-gray-400 mt-2">Guest access is limited to 5 minutes.</p>
         </div>
       </motion.div>
     </div>

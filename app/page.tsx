@@ -208,6 +208,20 @@ export default function LandingPage() {
     runSequence()
   }, [])
 
+  const { theme: systemTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null // avoid SSR mismatch
+
+  const currentTheme = theme === 'system' ? systemTheme : theme
+  const imageSrc = currentTheme === 'dark'
+    ? '/Launch_SVG_Dark.svg'
+    : '/Launch_SVG_Light.svg'
+
   return (
     <div className="flex min-h-screen flex-col relative overflow-hidden">
       {/* Noise overlay */}
@@ -253,27 +267,28 @@ export default function LandingPage() {
                 collaborative for developers of all skill levels.
               </motion.p>
 
-              {/* Product Hunt Badge */}
+              {/* Peerlist Badge */}
               <motion.div 
-                className="mt-8 flex justify-center"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-              >
-                <a 
-                  href="https://www.producthunt.com/posts/git-friend?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-git&#0045;friend" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  <img 
-                    src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=966948&theme=neutral&t=1747547887029" 
-                    alt="Git Friend - Make git simple again | Product Hunt" 
-                    style={{ width: "250px", height: "54px" }} 
-                    width="250" 
-                    height="54" 
-                  />
-                </a>
-              </motion.div>
+      className="mt-8 flex justify-center"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4, duration: 0.6 }}
+    >
+      <a 
+        href="https://peerlist.io/git-friend" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        aria-label="View Git Friend on Peerlist"
+      >
+        <img 
+          src={imageSrc}
+          alt="Git Friend on Peerlist"
+          style={{ width: "221px", height: "60px" }}
+          width={221}
+          height={60}
+        />
+      </a>
+    </motion.div>
             </motion.div>
 
             {/* AI Chatbot Interface */}
@@ -1303,6 +1318,19 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      {/* Global style for Peerlist badge SVG visibility in dark mode and light mode */}
+      <style jsx global>{`
+        @media (prefers-color-scheme: dark) {
+          .peerlist-badge-svg {
+            filter: drop-shadow(0 2px 8px #00AA45) brightness(1.2);
+          }
+        }
+        @media (prefers-color-scheme: light) {
+          .peerlist-badge-svg {
+            filter: drop-shadow(0 2px 8px #222) brightness(1.1);
+          }
+        }
+      `}</style>
     </div>
   )
 }

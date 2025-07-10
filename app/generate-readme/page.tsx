@@ -3,8 +3,7 @@
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { UserAuthButton } from "@/components/auth/user-auth-button"
 
-import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
@@ -40,6 +39,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { TextShimmerWave } from "@/components/core/text-shimmer-wave"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/context/auth-context"
 
 export default function GenerateReadme() {
   // Array of README tips
@@ -96,7 +96,6 @@ export default function GenerateReadme() {
   const [currentFactIndex, setCurrentFactIndex] = useState(0)
   const [showOverlay, setShowOverlay] = useState(false)
   const overlayRef = useRef<HTMLDivElement>(null)
-  const [isPro, setIsPro] = useState(false)
   const [customRequirements, setCustomRequirements] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [hoverState, setHoverState] = useState({
@@ -104,6 +103,16 @@ export default function GenerateReadme() {
     button: false,
     examples: Array(exampleRepos.length).fill(false),
   })
+  const { isGuest, guestTimeLeft, guestLogout } = useAuth();
+  const [showGuestExpired, setShowGuestExpired] = useState(false);
+
+  // Show modal and block actions when guest session expires
+  useEffect(() => {
+    if (isGuest && guestTimeLeft === 0) {
+      setShowGuestExpired(true);
+      guestLogout();
+    }
+  }, [isGuest, guestTimeLeft, guestLogout]);
 
   // Steps in the generation process
   const steps = [
@@ -175,7 +184,11 @@ export default function GenerateReadme() {
     }
   }
 
-  const fetchRepoData = async () => {
+  // Block API calls and UI actions if guest session expired
+  const isGuestBlocked = isGuest && guestTimeLeft === 0;
+
+  const fetchRepoData = async (force = false) => {
+    if (isGuestBlocked) return;
     if (!validateRepoUrl(repoUrl)) {
       setError("Please enter a valid GitHub repository URL")
       return
@@ -213,7 +226,8 @@ export default function GenerateReadme() {
         },
         body: JSON.stringify({
           repoUrl,
-          customRequirements: isPro && customRequirements ? customRequirements : undefined,
+          customInstructions: customRequirements || undefined,
+          force,
         }),
       })
 
@@ -334,8 +348,16 @@ export default function GenerateReadme() {
     })
   }
 
+  // Show guest timer at the top if guest
+  const guestTimerBar = isGuest && guestTimeLeft && guestTimeLeft > 0 ? (
+    <div className="w-full bg-yellow-100 text-yellow-800 text-center py-2 font-medium text-sm sticky top-0 z-50">
+      Guest access: {Math.floor(guestTimeLeft / 60)}:{(guestTimeLeft % 60).toString().padStart(2, '0')} left. <span className="font-normal">Sign in for unlimited access.</span>
+    </div>
+  ) : null;
+
   return (
     <ProtectedRoute>
+      {guestTimerBar}
       <div className="flex min-h-screen flex-col bg-[hsl(var(--readme-bg))] text-[hsl(var(--readme-text))]">
         <header className="sticky top-0 z-40 border-b border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-bg))/80] backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--readme-bg))/60]">
           <div className="container flex h-16 items-center justify-between">
@@ -437,6 +459,13 @@ export default function GenerateReadme() {
               onMouseEnter={() => setHoverState((prev) => ({ ...prev, card: true }))}
               onMouseLeave={() => setHoverState((prev) => ({ ...prev, card: false }))}
             >
+              {/* Stepper/Progress Bar */}
+              {/* 1. Remove the horizontal stepper/progress bar (delete the <div> with stepper code) */}
+              {/* 2. Enhance the input section card: add a header, info icons, more padding, modern border/shadow, better layout */}
+              {/* 3. Make custom instructions area more prominent */}
+              {/* 4. Improve button layout for Generate/Regenerate */}
+              {/* 5. Enhance the generated README card: modern border/shadow, sticky action bar, better markdown font/spacing, subtle animations */}
+              {/* 6. Ensure mobile responsiveness */}
               <Card
                 className={`border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-card-bg))] shadow-lg overflow-hidden transition-all duration-300 ${
                   hoverState.card ? "shadow-xl border-[hsl(var(--readme-primary))/30]" : ""
@@ -472,45 +501,14 @@ export default function GenerateReadme() {
                     />
                   </div>
 
-                  {isPro && (
-                    <motion.div
-                      className="mb-6 p-4 border border-[hsl(var(--readme-border))] rounded-md bg-[hsl(var(--readme-bg))/50"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Lock className="h-4 w-4 text-[hsl(var(--readme-primary))]" />
-                        <span className="text-sm font-medium">Pro Feature</span>
-                      </div>
-                      <p className="text-[hsl(var(--readme-text-muted))] text-xs mb-2">
-                        Customize your README with specific requirements and formatting preferences.
-                      </p>
-                      <Textarea
-                        className="w-full h-24 bg-[hsl(var(--readme-card-bg))] border border-[hsl(var(--readme-border))] rounded-md px-3 py-2 text-sm text-[hsl(var(--readme-text))] placeholder:text-[hsl(var(--readme-text-muted))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--readme-primary))] resize-none"
-                        placeholder="Add custom requirements for your README (e.g., 'Include a detailed API documentation section' or 'Focus on installation instructions for Docker')"
-                        value={customRequirements}
-                        onChange={(e) => setCustomRequirements(e.target.value)}
-                      />
-                      <div className="grid grid-cols-2 gap-2 mt-3">
-                        <div className="flex items-center gap-1.5">
-                          <CheckCircle2 className="h-3 w-3 text-[hsl(var(--readme-primary))]" />
-                          <span className="text-xs">Custom sections</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <CheckCircle2 className="h-3 w-3 text-[hsl(var(--readme-primary))]" />
-                          <span className="text-xs">Advanced templates</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
 
-                  <div className="flex justify-end">
+
+                  <div className="flex justify-end gap-2">
                     <Button
                       className={`bg-[hsl(var(--readme-primary))] hover:bg-[hsl(var(--readme-primary-hover))] text-[hsl(var(--readme-primary-foreground))] px-6 py-2 rounded-md flex items-center gap-2 transition-all duration-300 ${
                         hoverState.button ? "shadow-lg shadow-[hsl(var(--readme-primary))/20] scale-105" : ""
                       }`}
-                      onClick={fetchRepoData}
+                      onClick={() => fetchRepoData(false)}
                       disabled={isGenerating || !repoUrl}
                       onMouseEnter={() => setHoverState((prev) => ({ ...prev, button: true }))}
                       onMouseLeave={() => setHoverState((prev) => ({ ...prev, button: false }))}
@@ -518,6 +516,7 @@ export default function GenerateReadme() {
                       <Zap className="h-4 w-4" />
                       Generate README
                     </Button>
+
                   </div>
                 </CardContent>
               </Card>
@@ -639,6 +638,15 @@ export default function GenerateReadme() {
                                 </>
                               )}
                             </Button>
+                            <Button
+                      variant="outline"
+                      className="flex items-center gap-2 border-[hsl(var(--readme-border))]"
+                      onClick={() => fetchRepoData(true)}
+                      disabled={isGenerating || !repoUrl}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Regenerate
+                    </Button>
                           </div>
                           <ScrollArea className="h-[600px] pr-4 mt-8">
                             <div className="prose prose-sm max-w-none px-6 readme-preview">
@@ -669,11 +677,11 @@ export default function GenerateReadme() {
                                     />
                                   ),
                                   h3: ({ node, ...props }) => <h3 {...props} className="text-xl font-bold mt-5 mb-2" />,
-                                  code: ({ node, inline, className, ...props }) =>
+                                  code: ({ node, inline, className, children, ...props }: any) =>
                                     inline ? (
-                                      <code {...props} className="px-1 py-0.5 bg-gray-100 rounded text-gray-800" />
+                                      <code className="px-1 py-0.5 bg-gray-100 rounded text-gray-800" {...props}>{children}</code>
                                     ) : (
-                                      <code {...props} className="block overflow-x-auto text-gray-800" />
+                                      <code className="block overflow-x-auto text-gray-800" {...props}>{children}</code>
                                     ),
                                   pre: ({ node, ...props }) => (
                                     <pre
@@ -912,6 +920,16 @@ export default function GenerateReadme() {
           </AnimatePresence>
         </main>
       </div>
+      {/* Guest session expired modal */}
+      {showGuestExpired && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full text-center">
+            <h2 className="text-xl font-bold mb-2">Guest Session Expired</h2>
+            <p className="mb-4 text-gray-600">Your 5-minute guest session has ended. Please sign in to continue using Git Friend.</p>
+            <Button onClick={() => window.location.reload()} className="w-full">Sign In</Button>
+          </div>
+        </div>
+      )}
     </ProtectedRoute>
   )
 }
