@@ -53,7 +53,7 @@ Always aim to be complete and correct. If the query is ambiguous, ask clarifying
 
     const completion = await groq.chat.completions.create({
       messages: [systemMessage, ...messages],
-      model: "llama3-8b-8192",
+      model: "llama-3.1-8b-instant",
       temperature: 0.7,
       max_completion_tokens: 2048,
       top_p: 1,

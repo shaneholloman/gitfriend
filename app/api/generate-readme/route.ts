@@ -287,7 +287,7 @@ ${creativePrompt}
         { role: "system", content: basePrompt },
         { role: "user", content: "Generate a README that is different from any previous output for this repo. Be creative!" },
       ],
-      model: "llama3-8b-8192",
+      model: "llama-3.1-8b-instant",
       temperature: 1.5,
       max_completion_tokens: 2500,
       top_p: 0.8,
