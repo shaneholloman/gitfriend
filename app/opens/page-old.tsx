@@ -1,16 +1,20 @@
 "use client"
 
-import { useCallback, useMemo, useRef } from "react"
+import { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import useSWRInfinite from "swr/infinite"
 import { motion } from "framer-motion"
 import { Filters } from "@/components/opens/Filters"
 import { OssTable } from "@/components/opens/Table"
 import { buildSearchParams, fetchRepos, decorateRepo, DEFAULT_PER_PAGE, type OssSearchParams } from "@/lib/fetchRepos"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, RefreshCw, Database, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 
 export default function OpenSourceExplorerPage() {
+  const [cacheStats, setCacheStats] = useState<any>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  
   const paramsRef = useRef<OssSearchParams>({
     q: "",
     language: "all",
@@ -54,6 +58,50 @@ export default function OpenSourceExplorerPage() {
     [mutate],
   )
 
+  // Fetch cache stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/repos/stats')
+        const data = await response.json()
+        if (data.success) {
+          setCacheStats(data.data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch cache stats:', error)
+      }
+    }
+    
+    fetchStats()
+    const interval = setInterval(fetchStats, 30000) // Update every 30 seconds
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleRefresh = useCallback(async () => {
+    if (!paramsRef.current.q) return
+    
+    setIsRefreshing(true)
+    try {
+      const response = await fetch('/api/repos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: paramsRef.current.q,
+          page: 1,
+          perPage: DEFAULT_PER_PAGE,
+        }),
+      })
+      
+      if (response.ok) {
+        mutate() // Refresh the data
+      }
+    } catch (error) {
+      console.error('Failed to refresh data:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [mutate])
+
   const loadMore = useCallback(() => {
     if (!flat.end) setSize(size + 1)
   }, [flat.end, setSize, size])
@@ -82,6 +130,41 @@ export default function OpenSourceExplorerPage() {
         >
           Discover and explore trending repositories with instant search, smart filters, and smooth pagination.
         </motion.p>
+        
+        {/* Cache Status and Refresh Button */}
+        <motion.div
+          className="mt-4 flex items-center justify-between"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.1 }}
+        >
+          {cacheStats && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Database className="w-4 h-4" />
+              <span>{cacheStats.repositories} repos cached</span>
+              {cacheStats.needsRefresh && (
+                <Badge variant="outline" className="text-orange-600 border-orange-200">
+                  <Clock className="w-3 h-3 mr-1" />
+                  Stale
+                </Badge>
+              )}
+            </div>
+          )}
+          
+          <Button
+            onClick={handleRefresh}
+            disabled={isRefreshing || !paramsRef.current.q}
+            variant="outline"
+            size="sm"
+          >
+            {isRefreshing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Refresh Cache
+          </Button>
+        </motion.div>
 
         <div className="mt-6">
           <Filters initialParams={paramsRef.current} onParamsChange={onParamsChange} />

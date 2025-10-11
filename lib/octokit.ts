@@ -23,7 +23,6 @@ export function getOctokit() {
           retryAfter,
           retryCount,
         )
-        // Automatically retries once; you can tune this upward if needed
         return retryCount < 1
       },
       onAbuseLimit: (retryAfter, options) => {
@@ -33,7 +32,6 @@ export function getOctokit() {
           options.url,
           retryAfter,
         )
-        // Do not retry automatically; caller should back off
         return false
       },
     },
