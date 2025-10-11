@@ -19,3 +19,7 @@ export function useMobile() {
 
   return !!isMobile
 }
+
+export function useIsMobile() {
+  return useMobile()
+}

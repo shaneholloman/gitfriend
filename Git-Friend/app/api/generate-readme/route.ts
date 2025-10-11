@@ -1,13 +1,195 @@
 import { Octokit } from "@octokit/rest"
-import { Groq } from 'groq-sdk'
+import { Groq } from "groq-sdk"
 import { type NextRequest, NextResponse } from "next/server"
 import { redis, CACHE_KEYS, CACHE_TTL, type ReadmeGenerationStatus } from "@/lib/redis"
+import { scanRepository, type ScannedFile, type RepoAnalysis } from "@/lib/github"
 
-// Initialize Groq
+// Define types and functions inline to avoid import issues
+type ProjectKind = "web" | "python" | "java" | "native" | "unknown"
+
+const BINARY_EXT =
+  /\.(png|jpg|jpeg|gif|webp|svg|ico|mp4|mov|avi|mkv|mp3|wav|flac|ogg|pdf|zip|tar|gz|bz2|7z|rar|exe|dll|so|dylib|bin|psd|ai|sketch|blend|glb|gltf|ttf|otf|woff2?)$/i
+const LOCKFILES = /(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|\.lock)$/i
+const UNIVERSAL_IGNORES =
+  /(^|\/)(node_modules|\.git|\.next|dist|build|out|target|venv|\.venv|__pycache__|\.cache|coverage|\.turbo|\.pnpm|bin|tmp|temp|logs?|datasets?|data|\.dvc|public\/uploads?)(\/|$)/i
+
+function detectProjectKind(analysis: RepoAnalysis): ProjectKind {
+  const paths = analysis.files.map((f) => f.path.toLowerCase())
+  const has = (re: RegExp) => paths.some((x) => re.test(x))
+
+  if (has(/package\.json$/) || has(/\.(tsx|jsx|html?)$/) || has(/next\.config\.(js|mjs|ts)$/)) return "web"
+  if (has(/requirements\.txt$/) || has(/pyproject\.toml$/) || has(/\.py$/)) return "python"
+  if (has(/pom\.xml$/) || has(/\.java$/)) return "java"
+  if (has(/\.(c|cc|cpp|h|hpp|go|rs)$/) || has(/(Makefile|CMakeLists\.txt|go\.mod|Cargo\.toml)$/)) return "native"
+  return "unknown"
+}
+
+function shouldIncludeByKind(kind: ProjectKind, path: string): boolean {
+  const p = path.toLowerCase()
+  if (p.endsWith("readme.md")) return true
+  if (p.endsWith("dockerfile") || p.endsWith("docker-compose.yml") || p.endsWith(".env.example")) return true
+  if (
+    p.endsWith("package.json") ||
+    p.endsWith("pom.xml") ||
+    p.endsWith("requirements.txt") ||
+    p.endsWith("pyproject.toml")
+  )
+    return true
+  if (
+    p.endsWith("tsconfig.json") ||
+    p.endsWith("next.config.js") ||
+    p.endsWith("next.config.mjs") ||
+    p.endsWith("next.config.ts")
+  )
+    return true
+  if (p.endsWith("go.mod") || p.endsWith("cargo.toml") || p.endsWith("cmakelists.txt") || p === "makefile") return true
+
+  switch (kind) {
+    case "web":
+      return /\.(tsx|jsx|ts|js|mjs|cjs|html?|json|ya?ml|css|scss|less|toml|md)$/i.test(p) && !/\.d\.ts$/.test(p)
+    case "python":
+      return /\.(py|md|txt|ya?ml|toml)$/i.test(p) || p.endsWith("requirements.txt")
+    case "java":
+      return /\.(java|md|xml|properties|gradle)$/i.test(p) || p.endsWith("pom.xml")
+    case "native":
+      return (
+        /\.(c|cc|cpp|h|hpp|rs|go|md|toml|txt)$/i.test(p) || /(go\.mod|Cargo\.toml|CMakeLists\.txt|Makefile)$/i.test(p)
+      )
+    default:
+      return /\.(md|txt|json|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|sh|bash|zsh)$/i.test(p)
+  }
+}
+
+function selectRelevantFiles(kind: ProjectKind, files: ScannedFile[], maxFiles = 220) {
+  const filtered = files.filter((f) => {
+    const p = f.path
+    if (UNIVERSAL_IGNORES.test(p)) return false
+    if (LOCKFILES.test(p)) return false
+    if (BINARY_EXT.test(p)) return false
+    return shouldIncludeByKind(kind, p)
+  })
+
+  const score = (p: string) => {
+    const l = p.toLowerCase()
+    if (l.endsWith("readme.md")) return 0
+    if (/(package\.json|requirements\.txt|pom\.xml)$/i.test(l)) return 1
+    if (l.includes("/app/") || l.includes("/src/")) return 2
+    if (l.includes("/api/") || l.includes("/lib/")) return 3
+    if (l.includes("docker")) return 4
+    return 5
+  }
+
+  return filtered.sort((a, b) => score(a.path) - score(b.path)).slice(0, maxFiles)
+}
+
+function buildContextBlock(analysis: RepoAnalysis, files: ScannedFile[]) {
+  const meta = `Repo: ${analysis.owner}/${analysis.repo}
+Name: ${analysis.repoMeta.name}
+Description: ${analysis.repoMeta.description || "N/A"}
+Languages: ${Object.keys(analysis.languages).join(", ") || "Unknown"}
+Default Branch: ${analysis.defaultBranch}
+Stars: ${analysis.repoMeta.stars}  Forks: ${analysis.repoMeta.forks}  Issues: ${analysis.repoMeta.openIssues}`
+
+  const parts = files.map((f) => {
+    const header = `\n---\nFile: ${f.path}\n`
+    return header + (f.content ? f.content : "")
+  })
+  return `${meta}\n\nKey Files:\n${parts.join("")}`
+}
+
+async function summarizeIfNeeded(groq: any, context: string, threshold = 15000): Promise<string> {
+  if (context.length <= threshold) return context
+
+  // For rate limiting, just truncate instead of making multiple API calls
+  console.warn("[README] Context too long, truncating to avoid rate limits")
+  return context.slice(0, threshold) + "\n\n... (truncated to avoid rate limits)"
+}
+
+function deriveTechStackHint(files: ScannedFile[]): string {
+  const text = files
+    .filter((f) => f.content && /\.(md|json|js|ts|tsx|jsx|py|java|toml|go|rs)$/i.test(f.path))
+    .map((f) => `\n[${f.path}]\n${f.content}`)
+    .join("")
+    .toLowerCase()
+
+  const hits: string[] = []
+  const mark = (k: string, needle: RegExp) => {
+    if (needle.test(text)) hits.push(k)
+  }
+
+  mark("Next.js", /next(\.js)?/i)
+  mark("React", /react/i)
+  mark("TypeScript", /typescript|\.ts(x)?\b/i)
+  mark("Tailwind CSS", /tailwind/i)
+  mark("Prisma", /prisma/i)
+  mark("NextAuth", /next-?auth/i)
+  mark("Vercel", /vercel/i)
+  mark("Python", /\bpython\b|\.py\b/i)
+  mark("Java", /\bjava\b|pom\.xml/i)
+  mark("Go", /\bgo\b|go\.mod/i)
+  mark("Rust", /\brust\b|cargo\.toml/i)
+  mark("Docker", /dockerfile|docker-compose/i)
+  mark("Redis", /redis/i)
+  mark("Supabase", /supabase/i)
+
+  const uniq = Array.from(new Set(hits))
+  return uniq.length ? uniq.join(", ") : "See Languages and dependencies"
+}
+
+function buildReadmeSystemPrompt(compressedContext: string, techStackHint: string, customInstructions?: string) {
+  const referenceImage =
+    "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-qGkDkby5jwbfb9ePVutsxIxV2FemcR.png"
+
+  return `
+You are GitFriend's README author powered by Groq. Produce a polished, publication-ready README.md with excellent Markdown rendering and clear hierarchy.
+
+Output requirements (strict):
+- Start with: 
+  # <Project Name>
+  <One-sentence tagline/description>
+  Tech Stack
+- Follow with these sections in order, using Markdown headings (##) and consistent spacing:
+  Introduction
+  Tech Stack (bulleted list with links where obvious)
+  How It's Built (Architecture / Key Modules)
+  Requirements / Prerequisites
+  Installation
+  Configuration (environment variables, including .env.example if present)
+  Usage (commands, examples)
+  Project Structure (short tree or bullets of core files)
+  Features
+  Deployment (if applicable)
+  Contributing
+  License
+  FAQ (optional, short)
+
+Formatting & style (inspired by the reference image at ${referenceImage}):
+- Prominent H1 title and a concise tagline.
+- Add an inline "Quick Links" line below the tagline using internal anchors: Introduction · Tech Stack · Usage · Contributing (only include links to sections that exist).
+- Use clean Markdown, no HTML unless absolutely necessary.
+- Prefer short paragraphs, bullet lists, and fenced code blocks for commands.
+- Never include triple-backticks around the entire README; output just the markdown body.
+
+Authoring rules:
+- Never fabricate specifics. Use best-effort synthesis from the provided context.
+- If information is missing, state reasonable placeholders (e.g., "TBD") sparingly.
+- Merge and improve any existing README content without duplication.
+- Keep language straightforward and developer-friendly.
+
+Context (compressed):
+${compressedContext}
+
+Tech Stack Hint (best-effort): ${techStackHint}
+
+${customInstructions ? `User Notes: ${customInstructions}` : ""}`
+}
+
+// Initialize Groq (singleton ok in route scope)
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY!,
 })
 
+// Keep a single Octokit instance for lightweight calls still used here
 const octokit = new Octokit({
   auth: process.env.GITHUB_ACCESS_TOKEN,
 })
@@ -29,10 +211,10 @@ async function fetchFileContents(owner: string, repo: string, path: string) {
 
 // Type for repo tree entries
 interface RepoTreeEntry {
-  name: string;
-  path: string;
-  type: "file" | "dir";
-  content?: string | null;
+  name: string
+  path: string
+  type: "file" | "dir"
+  content?: string | null
 }
 
 // Recursively fetch files and their contents (with limits)
@@ -43,35 +225,42 @@ async function fetchRepoTreeAndContents(
   depth = 0,
   maxDepth = 2,
   maxFiles = 30,
-  collected: RepoTreeEntry[] = []
+  collected: RepoTreeEntry[] = [],
 ): Promise<RepoTreeEntry[]> {
-  if (depth > maxDepth || collected.length >= maxFiles) return collected;
+  if (depth > maxDepth || collected.length >= maxFiles) return collected
   try {
-    const { data } = await octokit.repos.getContent({ owner, repo, path });
+    const { data } = await octokit.repos.getContent({ owner, repo, path })
     if (Array.isArray(data)) {
       for (const item of data) {
-        if (collected.length >= maxFiles) break;
+        if (collected.length >= maxFiles) break
         if (item.type === "file") {
           // Only fetch content for key files or small files
-          let content: string | null = null;
-          if (/^(readme|package|tsconfig|next\.config|dockerfile|\.env|main|index|app|src|setup|config|requirements|pyproject|composer|build|Makefile|Procfile|server|client|api|lib|utils|test|spec|docs?)\./i.test(item.name) || item.size < 20000) {
+          let content: string | null = null
+          if (
+            /^(readme|package|tsconfig|next\.config|dockerfile|\.env|main|index|app|src|setup|config|requirements|pyproject|composer|build|Makefile|Procfile|server|client|api|lib|utils|test|spec|docs?)\./i.test(
+              item.name,
+            ) ||
+            item.size < 20000
+          ) {
             try {
-              const fileContent = await fetchFileContents(owner, repo, item.path);
+              const fileContent = await fetchFileContents(owner, repo, item.path)
               // Only take first 1000 chars for large files
-              content = fileContent ? fileContent.slice(0, 1000) + (fileContent.length > 1000 ? "\n... (truncated)" : "") : null;
+              content = fileContent
+                ? fileContent.slice(0, 1000) + (fileContent.length > 1000 ? "\n... (truncated)" : "")
+                : null
             } catch {}
           }
-          collected.push({ name: item.name, path: item.path, type: "file", content });
+          collected.push({ name: item.name, path: item.path, type: "file", content })
         } else if (item.type === "dir") {
-          collected.push({ name: item.name, path: item.path, type: "dir" });
-          await fetchRepoTreeAndContents(owner, repo, item.path, depth + 1, maxDepth, maxFiles, collected);
+          collected.push({ name: item.name, path: item.path, type: "dir" })
+          await fetchRepoTreeAndContents(owner, repo, item.path, depth + 1, maxDepth, maxFiles, collected)
         }
       }
     }
   } catch (e) {
     // Ignore errors for folders/files we can't access
   }
-  return collected;
+  return collected
 }
 
 // Check if README generation is already in progress or completed
@@ -121,13 +310,13 @@ export async function POST(req: NextRequest) {
 
     // Check if we already have a cached README, unless force is true
     if (!force) {
-    const cachedReadme = await redis.get(CACHE_KEYS.README_GENERATION(repoUrl))
-    if (cachedReadme) {
-      return NextResponse.json({
-        status: "completed",
-        readme: cachedReadme,
-        cached: true,
-      })
+      const cachedReadme = await redis.get(CACHE_KEYS.README_GENERATION(repoUrl))
+      if (cachedReadme) {
+        return NextResponse.json({
+          status: "completed",
+          readme: cachedReadme,
+          cached: true,
+        })
       }
     }
 
@@ -156,160 +345,78 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Add multiple creative prompt templates
-const promptTemplates = [
-  // Fun and engaging
-  `# Context\nYou are a creative technical writer. Write a README that is fun, engaging, and uses a unique structure. Use humor, analogies, and make it memorable. Avoid repeating previous outputs. Surprise the user!\n\n## Instructions\n- Use emojis and playful language.\n- Add a fun fact or tip about the project or its tech stack.\n- Make the sections stand out with creative titles.\n- End with a motivational quote about open source or coding.\n`,
-  // Minimalist
-  `# Context\nWrite a minimalist, clean, and highly readable README. Use short sentences and bullet points. Do NOT use the same structure as before.\n\n## Instructions\n- Be concise.\n- Use whitespace and simple formatting.\n- Focus on clarity.\n- Avoid unnecessary sections.\n`,
-  // Professional
-  `# Context\nWrite a professional, enterprise-style README. Use formal language and detailed explanations. Make it different from previous outputs.\n\n## Instructions\n- Use clear section headers.\n- Provide detailed setup and usage instructions.\n- Highlight best practices and code quality.\n- Encourage contributions in a formal tone.\n`,
-  // Beginner-friendly
-  `# Context\nWrite a README that is beginner-friendly and easy to follow. Assume the reader is new to open source.\n\n## Instructions\n- Explain all terms and steps.\n- Use simple language.\n- Add a short FAQ section.\n- Encourage questions and contributions.\n`,
-  // Community-focused
-  `# Context\nWrite a README that emphasizes community and collaboration.\n\n## Instructions\n- Highlight how to contribute.\n- Add a section about the community.\n- Use inclusive language.\n- Add a call to action for new contributors.\n`,
-];
-
 // Background process to generate README
 async function generateReadmeInBackground(repoUrl: string, customInstructions?: string) {
   try {
-    // Update status to processing
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "processing", { ex: CACHE_TTL.STATUS })
 
-    const match = repoUrl.match(/github\.com\/(.+?)\/(.+?)(?:\.git)?$/)
+    const match = repoUrl.match(/github\.com\/(.+?)\/(.+?)(?:\.git)?(?:\/)?$/)
     if (!match) {
       throw new Error("Invalid GitHub URL")
     }
+    const [, owner, repo] = match
 
-    const [_, owner, repo] = match
-    const { data: repoData } = await octokit.repos.get({ owner, repo })
-    const { data: rootContents } = await octokit.repos.getContent({ owner, repo, path: "" })
+    // Full repo analysis (already avoids huge/binary files)
+    const analysis = await scanRepository({
+      owner,
+      repo,
+      maxFiles: 100, // Reduced to avoid rate limits
+      maxFileSizeBytes: 128_000, // Reduced
+      perFileCharLimit: 2000, // Reduced
+    })
 
-    const files = Array.isArray(rootContents)
-      ? rootContents.map((item) => ({ name: item.name, type: item.type, path: item.path }))
-      : []
-    const languages = await fetchLanguages(owner, repo)
+    const kind = detectProjectKind(analysis)
+    const relevant = selectRelevantFiles(kind, analysis.files, 100)
+    const contextRaw = buildContextBlock(analysis, relevant)
+    const compressedContext = await summarizeIfNeeded(groq, contextRaw, 8000) // Reduced threshold
+    const techStackHint = deriveTechStackHint(relevant)
 
-    // Recursively fetch important files and their contents (limit depth/files for efficiency)
-    const repoTree = await fetchRepoTreeAndContents(owner, repo, "", 0, 2, 30, [])
+    const systemPrompt = buildReadmeSystemPrompt(compressedContext, techStackHint, customInstructions)
 
-    let packageJson = null
-    const packageJsonFile = repoTree.find((file) => file.name === "package.json" && file.content)
-    if (packageJsonFile && packageJsonFile.content) {
+    // Add retry logic for rate limiting
+    let completion
+    let retries = 3
+    while (retries > 0) {
       try {
-        packageJson = JSON.parse(packageJsonFile.content)
-        } catch (e) {
-          console.error("Error parsing package.json:", e)
+        completion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: "Generate the README.md now. Begin with name, description, and tech stack." },
+          ],
+          model: "openai/gpt-oss-120b",
+          temperature: 0.7,
+          max_completion_tokens: 3000, // Further reduced
+          top_p: 1,
+          stream: false,
+        })
+        break // Success, exit retry loop
+      } catch (error: any) {
+        if (error?.status === 429 && retries > 1) {
+          // Rate limited, wait and retry
+          const waitTime = Math.pow(2, 3 - retries) * 1000 // Exponential backoff
+          console.warn(`[README] Rate limited, waiting ${waitTime}ms before retry ${4 - retries}/3`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+          retries--
+        } else {
+          throw error // Re-throw if not rate limit or no retries left
+        }
       }
     }
 
-    const dependencies = packageJson
-      ? { dependencies: packageJson.dependencies || {}, devDependencies: packageJson.devDependencies || {} }
-      : null
-
-    const configFiles = {
-      hasReact: repoTree.some(
-        (f) =>
-          f.name.includes("react") ||
-          (dependencies?.dependencies && Object.keys(dependencies.dependencies).includes("react")),
-      ),
-      hasNext: repoTree.some(
-        (f) =>
-          f.name === "next.config.js" ||
-          (dependencies?.dependencies && Object.keys(dependencies.dependencies).includes("next")),
-      ),
-      hasTypescript: repoTree.some(
-        (f) =>
-          f.name === "tsconfig.json" || repoTree.some((file) => file.name.endsWith(".ts") || file.name.endsWith(".tsx")),
-      ),
-      hasDocker: repoTree.some((f) => f.name === "Dockerfile" || f.name === "docker-compose.yml"),
-      hasTests: repoTree.some(
-        (f) =>
-          f.name.includes("test") ||
-          f.name.includes("spec") ||
-          (dependencies?.devDependencies &&
-            Object.keys(dependencies.devDependencies).some((dep) => dep.match(/jest|mocha|vitest/))),
-      ),
+    if (!completion) {
+      throw new Error("Failed to generate README after retries")
     }
 
-    const categorizedFiles = {
-      configuration: repoTree.filter((f) => f.name.match(/\.json$|\.config\.js$|\.env\.example$|\.gitignore/)).map((f) => f.name),
-      sourceCode: repoTree.filter((f) => f.name && f.name.match(/\.(js|ts|jsx|tsx|py|go|rb|php|java)$/) && !f.name.endsWith(".config.js")).map((f) => f.name),
-      documentation: repoTree.filter((f) => f.name && (f.name.toLowerCase().includes("readme") || f.name.toLowerCase().includes("docs") || f.name.endsWith(".md"))).map((f) => f.name),
-    }
-
-    const existingReadme = repoTree.find((f) => f.name.toLowerCase() === "readme.md" && f.content)?.content || "No existing README found"
-
-    // Build a context summary of the file tree and key file contents
-    const fileContext = repoTree
-      .map((f) => {
-        if (f.type === "file" && f.content) {
-          return `---\nFile: ${f.path}\n${f.content}\n`;
-        } else if (f.type === "dir") {
-          return `---\nDirectory: ${f.path}\n`;
-        }
-        return null;
-      })
-      .filter(Boolean)
-      .join("\n");
-
-    // Dynamic prompt based on user instructions
-    let emojiInstruction = `Use Unicode emojis (not emoji codes) throughout the README to make it more visually appealing. Use emojis that are relevant to the content they accompany.`;
-    if (customInstructions && /no emojis|don't use emojis|without emojis/i.test(customInstructions)) {
-      emojiInstruction = `Do NOT use any emojis in the README.`;
-    }
-
-    // Add prompt variation for creativity
-    const promptVariations = [
-      "Make the README unique and engaging. Vary the structure and language each time.",
-      "Add creative section titles and use a friendly, welcoming tone.",
-      "Include a fun fact or tip about the project or its tech stack.",
-      "Use a professional and concise style, but make it visually appealing.",
-      "Highlight what makes this project different from others.",
-      "Add a motivational or inspirational quote about open source or coding at the end.",
-      "Make the README beginner-friendly and easy to follow.",
-      "Emphasize best practices and code quality in the documentation.",
-      "Add a short FAQ section if possible.",
-      "Encourage contributions and community involvement in a creative way."
-    ];
-    const randomVariation = promptVariations[Math.floor(Math.random() * promptVariations.length)];
-
-    // Randomly select a creative prompt template
-    const creativePrompt = promptTemplates[Math.floor(Math.random() * promptTemplates.length)];
-
-    const basePrompt = `
-${creativePrompt}
-
-# Repository Information\n- **Name**: ${repoData.name}\n- **Description**: ${repoData.description || "No description provided"}\n- **Stars**: ${repoData.stargazers_count}\n- **Forks**: ${repoData.forks_count}\n- **Languages**: ${Object.keys(languages).join(", ")}\n- **Owner**: ${owner}\n\n# File Tree and Key File Contents (truncated for large files):\n${fileContext}\n\n# Tech Stack Clues\n${JSON.stringify(configFiles, null, 2)}\n\n# Dependencies (if available)\n${dependencies ? JSON.stringify(dependencies, null, 2) : "No package.json found"}\n\n# File Structure Overview\nConfiguration files: ${categorizedFiles.configuration.join(", ") || "None found"}\nSource code files: ${categorizedFiles.sourceCode.join(", ") || "None found"}\nDocumentation files: ${categorizedFiles.documentation.join(", ") || "None found"}\n\n# Current README (if exists):\n${existingReadme}\n\n# Emoji Usage\n${emojiInstruction}\n\n${customInstructions ? `# Additional User Instructions\n${customInstructions}` : ""}\n\n# Prompt Variation\n${randomVariation}\n\n# Output\nReturn only the final README.md content in Markdown format, no explanation or additional headers.\n`;
-
-    const completion = await groq.chat.completions.create({
-      messages: [
-        { role: "system", content: basePrompt },
-        { role: "user", content: "Generate a README that is different from any previous output for this repo. Be creative!" },
-      ],
-      model: "llama-3.1-8b-instant",
-      temperature: 1.5,
-      max_completion_tokens: 2500,
-      top_p: 0.8,
-      stream: false,
-      stop: null
-    })
-
-    const generatedReadme = completion.choices[0]?.message?.content
-
+    const generatedReadme = completion.choices?.[0]?.message?.content
     if (!generatedReadme) {
-      throw new Error("Failed to generate README")
+      throw new Error("Groq did not return content")
     }
 
-    // Cache the generated README
     await redis.set(CACHE_KEYS.README_GENERATION(repoUrl), generatedReadme, { ex: CACHE_TTL.README })
-
-    // Update status to completed
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "completed", { ex: CACHE_TTL.STATUS })
-
     return generatedReadme
   } catch (error) {
-    console.error("Error generating README:", error)
+    console.error("[v0] Error generating README:", error)
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "failed", { ex: CACHE_TTL.STATUS })
     throw error
   }

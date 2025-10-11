@@ -2,8 +2,10 @@
 
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { UserAuthButton } from "@/components/auth/user-auth-button"
+import MarkdownPreview from "@/components/readme/markdown-preview"
 
-import React, { useState, useRef, useEffect } from "react"
+import type React from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
@@ -20,25 +22,17 @@ import {
   Github,
   Code,
   CheckCircle2,
-  Lock,
   Lightbulb,
   X,
   AlertCircle,
   Download,
-  Star,
-  GitFork,
-  Clock,
-  Calendar,
 } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { motion, AnimatePresence } from "framer-motion"
 import { TextShimmerWave } from "@/components/core/text-shimmer-wave"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/context/auth-context"
 
 export default function GenerateReadme() {
@@ -103,16 +97,16 @@ export default function GenerateReadme() {
     button: false,
     examples: Array(exampleRepos.length).fill(false),
   })
-  const { isGuest, guestTimeLeft, guestLogout } = useAuth();
-  const [showGuestExpired, setShowGuestExpired] = useState(false);
+  const { isGuest, guestTimeLeft, guestLogout } = useAuth()
+  const [showGuestExpired, setShowGuestExpired] = useState(false)
 
   // Show modal and block actions when guest session expires
   useEffect(() => {
     if (isGuest && guestTimeLeft === 0) {
-      setShowGuestExpired(true);
-      guestLogout();
+      setShowGuestExpired(true)
+      guestLogout()
     }
-  }, [isGuest, guestTimeLeft, guestLogout]);
+  }, [isGuest, guestTimeLeft, guestLogout])
 
   // Steps in the generation process
   const steps = [
@@ -185,10 +179,10 @@ export default function GenerateReadme() {
   }
 
   // Block API calls and UI actions if guest session expired
-  const isGuestBlocked = isGuest && guestTimeLeft === 0;
+  const isGuestBlocked = isGuest && guestTimeLeft === 0
 
   const fetchRepoData = async (force = false) => {
-    if (isGuestBlocked) return;
+    if (isGuestBlocked) return
     if (!validateRepoUrl(repoUrl)) {
       setError("Please enter a valid GitHub repository URL")
       return
@@ -290,7 +284,10 @@ export default function GenerateReadme() {
             }, 1500)
           } else if (statusData.status === "failed") {
             clearInterval(pollInterval)
-            throw new Error("README generation failed")
+            setError("README generation failed. This might be due to rate limiting or API issues. Please try again in a few minutes.")
+            setIsGenerating(false)
+            setShowOverlay(false)
+            return
           }
           // Continue polling for pending or processing status
         } catch (error) {
@@ -349,11 +346,13 @@ export default function GenerateReadme() {
   }
 
   // Show guest timer at the top if guest
-  const guestTimerBar = isGuest && guestTimeLeft && guestTimeLeft > 0 ? (
-    <div className="w-full bg-yellow-100 text-yellow-800 text-center py-2 font-medium text-sm sticky top-0 z-50">
-      Guest access: {Math.floor(guestTimeLeft / 60)}:{(guestTimeLeft % 60).toString().padStart(2, '0')} left. <span className="font-normal">Sign in for unlimited access.</span>
-    </div>
-  ) : null;
+  const guestTimerBar =
+    isGuest && guestTimeLeft && guestTimeLeft > 0 ? (
+      <div className="w-full bg-yellow-100 text-yellow-800 text-center py-2 font-medium text-sm sticky top-0 z-50">
+        Guest access: {Math.floor(guestTimeLeft / 60)}:{(guestTimeLeft % 60).toString().padStart(2, "0")} left.{" "}
+        <span className="font-normal">Sign in for unlimited access.</span>
+      </div>
+    ) : null
 
   return (
     <ProtectedRoute>
@@ -479,7 +478,6 @@ export default function GenerateReadme() {
                       </div>
                       <span className="text-xl font-medium">Generate Your README</span>
                     </div>
-
                   </div>
 
                   <p className="text-[hsl(var(--readme-text-muted))] text-sm mb-6">
@@ -501,8 +499,6 @@ export default function GenerateReadme() {
                     />
                   </div>
 
-
-
                   <div className="flex justify-end gap-2">
                     <Button
                       className={`bg-[hsl(var(--readme-primary))] hover:bg-[hsl(var(--readme-primary-hover))] text-[hsl(var(--readme-primary-foreground))] px-6 py-2 rounded-md flex items-center gap-2 transition-all duration-300 ${
@@ -516,7 +512,6 @@ export default function GenerateReadme() {
                       <Zap className="h-4 w-4" />
                       Generate README
                     </Button>
-
                   </div>
                 </CardContent>
               </Card>
@@ -569,7 +564,6 @@ export default function GenerateReadme() {
 
             {generatedReadme && (
               <>
-
                 <motion.div
                   className="max-w-5xl mx-auto"
                   initial={{ opacity: 0, y: 20 }}
@@ -595,129 +589,19 @@ export default function GenerateReadme() {
                     </TabsList>
 
                     <TabsContent value="preview">
-                      <Card className="relative shadow-lg border border-gray-300 readme-preview-container">
-                        <CardContent className="pt-6">
-                          <div className="absolute top-4 right-4 flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
-                              onClick={() => {
-                                setRepoUrl("")
-                                setGeneratedReadme("")
-                                setRepoData(null)
-                              }}
-                            >
-                              <GitBranch className="h-4 w-4" />
-                              New
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
-                              onClick={downloadReadme}
-                            >
-                              <Download className="h-4 w-4" />
-                              Download
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-black hover:text-white dark:bg-black dark:text-white dark:hover:bg-white dark:hover:text-black"
-                              onClick={copyToClipboard}
-                            >
-                              {copied ? (
-                                <>
-                                  <Check className="h-4 w-4" />
-                                  Copied!
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-4 w-4" />
-                                  Copy
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                      variant="outline"
-                      className="flex items-center gap-2 border-[hsl(var(--readme-border))]"
-                      onClick={() => fetchRepoData(true)}
-                      disabled={isGenerating || !repoUrl}
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Regenerate
-                    </Button>
-                          </div>
-                          <ScrollArea className="h-[600px] pr-4 mt-8">
-                            <div className="prose prose-sm max-w-none px-6 readme-preview">
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                  img: ({ node, ...props }) => (
-                                    <img {...props} className="max-w-full h-auto my-4" alt={props.alt || ""} />
-                                  ),
-                                  a: ({ node, ...props }) => (
-                                    <a
-                                      {...props}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:underline"
-                                    />
-                                  ),
-                                  h1: ({ node, ...props }) => (
-                                    <h1
-                                      {...props}
-                                      className="text-3xl font-bold mt-8 mb-4 pb-2 border-b border-gray-200"
-                                    />
-                                  ),
-                                  h2: ({ node, ...props }) => (
-                                    <h2
-                                      {...props}
-                                      className="text-2xl font-bold mt-6 mb-3 pb-2 border-b border-gray-200"
-                                    />
-                                  ),
-                                  h3: ({ node, ...props }) => <h3 {...props} className="text-xl font-bold mt-5 mb-2" />,
-                                  code: ({ node, inline, className, children, ...props }: any) =>
-                                    inline ? (
-                                      <code className="px-1 py-0.5 bg-gray-100 rounded text-gray-800" {...props}>{children}</code>
-                                    ) : (
-                                      <code className="block overflow-x-auto text-gray-800" {...props}>{children}</code>
-                                    ),
-                                  pre: ({ node, ...props }) => (
-                                    <pre
-                                      {...props}
-                                      className="p-4 bg-gray-100 rounded-md overflow-x-auto my-4 border border-gray-200 text-gray-800"
-                                    />
-                                  ),
-                                  hr: ({ node, ...props }) => <hr {...props} className="my-6 border-gray-300" />,
-                                  table: ({ node, ...props }) => (
-                                    <div className="overflow-x-auto my-6">
-                                      <table {...props} className="min-w-full divide-y divide-gray-300" />
-                                    </div>
-                                  ),
-                                  th: ({ node, ...props }) => (
-                                    <th {...props} className="px-4 py-2 bg-gray-100 font-medium text-left" />
-                                  ),
-                                  td: ({ node, ...props }) => (
-                                    <td {...props} className="px-4 py-2 border-t border-gray-300" />
-                                  ),
-                                  ul: ({ node, ...props }) => <ul {...props} className="list-disc pl-5 my-4" />,
-                                  ol: ({ node, ...props }) => <ol {...props} className="list-decimal pl-5 my-4" />,
-                                  li: ({ node, ...props }) => <li {...props} className="my-1" />,
-                                  blockquote: ({ node, ...props }) => (
-                                    <blockquote
-                                      {...props}
-                                      className="pl-4 border-l-4 border-gray-200 text-gray-700 my-4 italic"
-                                    />
-                                  ),
-                                }}
-                              >
-                                {generatedReadme}
-                              </ReactMarkdown>
-                            </div>
-                          </ScrollArea>
-                        </CardContent>
-                      </Card>
+                      <MarkdownPreview
+                        markdown={generatedReadme}
+                        onNew={() => {
+                          setRepoUrl("")
+                          setGeneratedReadme("")
+                          setRepoData(null)
+                        }}
+                        onDownload={downloadReadme}
+                        onCopy={copyToClipboard}
+                        onRegenerate={() => fetchRepoData(true)}
+                        canRegenerate={!isGenerating && !!repoUrl}
+                        copied={copied}
+                      />
                     </TabsContent>
 
                     <TabsContent value="markdown">
@@ -727,7 +611,7 @@ export default function GenerateReadme() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))]  hover:bg-[hsl(var(--readme-bg))]"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))]  hover:bg-[hsl(var(--readme-bg))] bg-transparent"
                               onClick={() => {
                                 setRepoUrl("")
                                 setGeneratedReadme("")
@@ -740,7 +624,7 @@ export default function GenerateReadme() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))] bg-transparent"
                               onClick={downloadReadme}
                             >
                               <Download className="h-4 w-4" />
@@ -749,7 +633,7 @@ export default function GenerateReadme() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))]"
+                              className="flex items-center gap-2 border-[hsl(var(--readme-border))] hover:bg-[hsl(var(--readme-bg))] bg-transparent"
                               onClick={copyToClipboard}
                             >
                               {copied ? (
@@ -925,8 +809,12 @@ export default function GenerateReadme() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full text-center">
             <h2 className="text-xl font-bold mb-2">Guest Session Expired</h2>
-            <p className="mb-4 text-gray-600">Your 5-minute guest session has ended. Please sign in to continue using Git Friend.</p>
-            <Button onClick={() => window.location.reload()} className="w-full">Sign In</Button>
+            <p className="mb-4 text-gray-600">
+              Your 5-minute guest session has ended. Please sign in to continue using Git Friend.
+            </p>
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Sign In
+            </Button>
           </div>
         </div>
       )}

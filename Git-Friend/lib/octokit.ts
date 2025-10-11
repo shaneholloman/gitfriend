@@ -1,0 +1,42 @@
+import { Octokit } from "@octokit/rest"
+import { throttling } from "@octokit/plugin-throttling"
+import { retry } from "@octokit/plugin-retry"
+
+const ThrottledOctokit = Octokit.plugin(throttling, retry)
+
+let client: InstanceType<typeof ThrottledOctokit> | null = null
+
+export function getOctokit() {
+  if (client) return client
+  client = new ThrottledOctokit({
+    auth: process.env.GITHUB_ACCESS_TOKEN,
+    request: {
+      // conservative request timeout
+      timeout: 15_000,
+    },
+    throttle: {
+      onRateLimit: (retryAfter, options, octokit, retryCount) => {
+        console.warn(
+          "[octokit] rate limit hit for %s %s. retrying in %s sec (retry #%s)",
+          options.method,
+          options.url,
+          retryAfter,
+          retryCount,
+        )
+        // Automatically retries once; you can tune this upward if needed
+        return retryCount < 1
+      },
+      onAbuseLimit: (retryAfter, options) => {
+        console.warn(
+          "[octokit] abuse limit triggered for %s %s. backing off for %s sec",
+          options.method,
+          options.url,
+          retryAfter,
+        )
+        // Do not retry automatically; caller should back off
+        return false
+      },
+    },
+  })
+  return client
+}
