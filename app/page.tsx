@@ -150,9 +150,9 @@ export default function LandingPage() {
     },
     {
       id: 5,
-      title: "GitHub Repository Visualization",
+      title: "Open Source Finder",
       description:
-        "Turn any GitHub repository into an interactive diagram for visualization in seconds. Perfect for understanding complex codebases and explaining project architecture.",
+        "Discover amazing open source repositories with advanced filtering by language, stars, tags, and more. Find the perfect project for your next contribution.",
       icon: <GitGraph className="w-8 h-8" />,
       color: "from-teal-500 to-emerald-600",
       lightColor: "from-teal-400 to-emerald-500",
@@ -161,8 +161,7 @@ export default function LandingPage() {
       nodeIcon: <GitCommit className="w-3 h-3" />,
       secondaryIcon: <FileCode className="w-3 h-3" />,
       pattern: "circular",
-      comingSoon: true,
-      link: "#",
+      link: "/opensource",
     },
   ]
 
@@ -1119,7 +1118,7 @@ export default function LandingPage() {
                               </div>
                             )}
 
-                            <h3 className="text-2xl font-bold mb-3 text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/80">
+                            <h3 className="text-2xl font-bold mb-3 text-foreground">
                               {card.title}
                             </h3>
                             <p className="text-muted-foreground dark:text-gray-400">{card.description}</p>
