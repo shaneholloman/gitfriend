@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ClientOnly } from "@/components/ui/client-only"
 import { Search, Home, TrendingUp, Compass, ChevronRight, PanelLeftOpen } from "lucide-react"
 import { HomeSection } from "@/components/opensource/home-section"
+import { BeamsBackground } from "@/components/opensource/bg-beams"
 import { TrendingSection } from "@/components/opensource/trending-section"
 import { DiscoverSection } from "@/components/opensource/discover-section"
 
@@ -117,7 +118,8 @@ export default function OpenSourcePage() {
   ] as const
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
+    <div className="relative min-h-screen text-white">
+      <BeamsBackground className="fixed inset-0 -z-10" />
       <div className="relative flex md:overflow-hidden">
         <aside
           className={[

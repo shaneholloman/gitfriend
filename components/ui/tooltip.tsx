@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { motion } from "motion/react"
+import { motion } from "framer-motion"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
