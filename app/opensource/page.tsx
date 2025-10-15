@@ -5,9 +5,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ClientOnly } from "@/components/ui/client-only"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Search, Home, TrendingUp, Compass, Star, GitFork, ChevronRight } from "lucide-react"
 
 interface Repository {
@@ -42,7 +42,7 @@ export default function OpenSourcePage() {
     search: "",
     language: "all",
     minStars: "any",
-    sortBy: "stars"
+    sortBy: "stars",
   })
 
   useEffect(() => {
@@ -91,7 +91,9 @@ export default function OpenSourcePage() {
 
   const getPopularityBadge = (stars: number, index: number) => {
     if (index < 3) {
-      return <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-medium">Legendary</Badge>
+      return (
+        <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-medium">Legendary</Badge>
+      )
     }
     return <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30 font-medium">Famous</Badge>
   }
@@ -103,9 +105,9 @@ export default function OpenSourcePage() {
   ]
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white flex overflow-hidden">
-      {/* Sidebar - Fixed */}
-      <div className="w-64 border-r border-white/10 p-6 flex flex-col flex-shrink-0">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white flex flex-col md:flex-row md:overflow-hidden">
+      {/* Sidebar - Hidden on mobile */}
+      <div className="hidden md:flex w-64 border-r border-white/10 p-6 flex-col flex-shrink-0">
         <div className="space-y-8 flex-1">
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-4">General</p>
@@ -126,9 +128,7 @@ export default function OpenSourcePage() {
                       <Icon className="w-4 h-4" />
                       <span className="text-sm font-medium">{item.label}</span>
                     </div>
-                    {activeNav === item.id && (
-                      <ChevronRight className="w-4 h-4" />
-                    )}
+                    {activeNav === item.id && <ChevronRight className="w-4 h-4" />}
                   </button>
                 )
               })}
@@ -137,15 +137,35 @@ export default function OpenSourcePage() {
         </div>
       </div>
 
+      {/* Mobile nav (top) */}
+      <div className="md:hidden w-full border-b border-white/10 px-4 py-3">
+        <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const active = activeNav === item.id
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveNav(item.id)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap ${
+                  active ? "bg-white/10 text-white" : "text-gray-400 bg-white/5"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {item.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col md:overflow-hidden">
         {/* Filters - Fixed Header */}
-        <div className="flex-shrink-0 p-8 pb-4 border-b border-white/5">
-          <div className="max-w-7xl mx-auto flex items-center gap-4">
-            <ClientOnly fallback={
-              <div className="flex-1 h-10 rounded-lg bg-white/5 border border-white/10" />
-            }>
-              <div className="flex-1 relative">
+        <div className="flex-shrink-0 p-4 md:p-8 pb-3 md:pb-4 border-b border-white/5">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+            <ClientOnly fallback={<div className="w-full h-10 rounded-lg bg-white/5 border border-white/10" />}>
+              <div className="w-full relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search repositories..."
@@ -155,15 +175,17 @@ export default function OpenSourcePage() {
                 />
               </div>
             </ClientOnly>
-            
-            <ClientOnly fallback={
-              <>
-                <div className="w-40 h-10 rounded-lg bg-white/5 border border-white/10" />
-                <div className="w-40 h-10 rounded-lg bg-white/5 border border-white/10" />
-              </>
-            }>
+
+            <ClientOnly
+              fallback={
+                <>
+                  <div className="w-full sm:w-40 h-10 rounded-lg bg-white/5 border border-white/10" />
+                  <div className="w-full sm:w-40 h-10 rounded-lg bg-white/5 border border-white/10" />
+                </>
+              }
+            >
               <Select value={filters.language} onValueChange={(value) => setFilters({ ...filters, language: value })}>
-                <SelectTrigger className="w-40 bg-white/5 border-white/10 text-white backdrop-blur-xl">
+                <SelectTrigger className="w-full sm:w-40 bg-white/5 border-white/10 text-white backdrop-blur-xl">
                   <SelectValue placeholder="All Languages" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-900 border-white/10 text-white">
@@ -178,7 +200,7 @@ export default function OpenSourcePage() {
               </Select>
 
               <Select value={filters.sortBy} onValueChange={(value) => setFilters({ ...filters, sortBy: value })}>
-                <SelectTrigger className="w-40 bg-white/5 border-white/10 text-white backdrop-blur-xl">
+                <SelectTrigger className="w-full sm:w-40 bg-white/5 border-white/10 text-white backdrop-blur-xl">
                   <SelectValue placeholder="All Popularity" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-900 border-white/10 text-white">
@@ -193,7 +215,7 @@ export default function OpenSourcePage() {
         </div>
 
         {/* Scrollable Table Area */}
-        <div className="flex-1 overflow-auto p-8 pt-4">
+        <div className="flex-1 overflow-auto p-4 md:p-8 pt-3 md:pt-4">
           <div className="max-w-7xl mx-auto">
             {/* Table */}
             <div className="rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 overflow-hidden">
@@ -201,19 +223,21 @@ export default function OpenSourcePage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-white/10">
-                      <th className="text-left p-4 font-medium text-gray-400 text-sm">Repository</th>
-                      <th className="text-left p-4 font-medium text-gray-400 text-sm">Language</th>
-                      <th className="text-left p-4 font-medium text-gray-400 text-sm">Tags</th>
-                      <th className="text-right p-4 font-medium text-gray-400 text-sm">Stars</th>
-                      <th className="text-right p-4 font-medium text-gray-400 text-sm">Forks</th>
-                      <th className="text-left p-4 font-medium text-gray-400 text-sm">Popularity</th>
+                      <th className="text-left p-3 md:p-4 font-medium text-gray-400 text-xs md:text-sm">Repository</th>
+                      <th className="text-left p-3 md:p-4 font-medium text-gray-400 text-xs md:text-sm">Language</th>
+                      <th className="hidden lg:table-cell text-left p-4 font-medium text-gray-400 text-sm">Tags</th>
+                      <th className="text-right p-3 md:p-4 font-medium text-gray-400 text-xs md:text-sm">Stars</th>
+                      <th className="hidden sm:table-cell text-right p-4 font-medium text-gray-400 text-sm">Forks</th>
+                      <th className="hidden xl:table-cell text-left p-4 font-medium text-gray-400 text-sm">
+                        Popularity
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       Array.from({ length: 10 }).map((_, index) => (
                         <tr key={index} className="border-b border-white/5">
-                          <td className="p-4">
+                          <td className="p-3 md:p-4">
                             <div className="flex items-center space-x-3">
                               <Skeleton className="w-8 h-8 rounded-full bg-white/10" />
                               <div className="space-y-2">
@@ -222,145 +246,130 @@ export default function OpenSourcePage() {
                               </div>
                             </div>
                           </td>
-                          <td className="p-4">
+                          <td className="p-3 md:p-4">
                             <Skeleton className="h-6 w-20 rounded-md bg-white/10" />
                           </td>
-                          <td className="p-4">
+                          <td className="hidden lg:table-cell p-4">
                             <div className="flex space-x-2">
                               <Skeleton className="h-5 w-16 rounded bg-white/10" />
                               <Skeleton className="h-5 w-20 rounded bg-white/10" />
                             </div>
                           </td>
-                          <td className="p-4 text-right">
+                          <td className="p-3 md:p-4 text-right">
                             <Skeleton className="h-4 w-12 ml-auto bg-white/10" />
                           </td>
-                          <td className="p-4 text-right">
+                          <td className="hidden sm:table-cell p-4 text-right">
                             <Skeleton className="h-4 w-12 ml-auto bg-white/10" />
                           </td>
-                          <td className="p-4">
+                          <td className="hidden xl:table-cell p-4">
                             <Skeleton className="h-6 w-20 rounded-full bg-white/10" />
                           </td>
                         </tr>
                       ))
                     ) : (
-                      repositories.map((repo, index) => (
-                        <tr 
-                          key={repo.id} 
-                          className="border-b border-white/5 hover:bg-white/5 transition-all duration-200"
-                        >
-                          <td 
-                            className="p-4 relative"
-                            onMouseEnter={() => setHoveredRepo(repo.id)}
-                            onMouseLeave={() => setHoveredRepo(null)}
+                      <TooltipProvider>
+                        {repositories.map((repo, index) => (
+                          <tr
+                            key={repo.id}
+                            className="border-b border-white/5 hover:bg-white/5 transition-all duration-200"
                           >
-                            <a 
-                              href={repo.html_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center space-x-3 group cursor-pointer"
+                            <td
+                              className="p-3 md:p-4 relative"
+                              onMouseEnter={() => setHoveredRepo(repo.id)}
+                              onMouseLeave={() => setHoveredRepo(null)}
                             >
-                              <Avatar className="w-8 h-8 ring-1 ring-white/10 transition-all duration-200 group-hover:ring-2 group-hover:ring-blue-400/50 group-hover:scale-110">
-                                <AvatarImage 
-                                  src={repo.owner.avatar_url} 
-                                  alt={`${repo.owner.login} avatar`}
-                                  className="object-cover"
-                                />
-                                <AvatarFallback className="bg-white/10 text-white text-sm font-medium">
-                                  {repo.owner.login.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-medium text-white group-hover:text-blue-400 transition-colors duration-200">{repo.name}</div>
-                                <div className="text-sm text-gray-500">{repo.owner.login}</div>
-                              </div>
-                            </a>
-                            
-                            {/* Enhanced Glassmorphic Tooltip */}
-                            {hoveredRepo === repo.id && repo.description && (
-                              <div className="absolute left-0 top-full mt-3 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <div className="relative bg-gray-900/95 backdrop-blur-xl border border-white/30 rounded-2xl p-4 shadow-2xl max-w-sm">
-                                  {/* Liquid glass effect overlay */}
-                                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-2xl"></div>
-                                  
-                                  {/* Content */}
-                                  <div className="relative z-10">
-                                    <div className="flex items-start gap-3 mb-3">
-                                      <Avatar className="w-10 h-10 ring-2 ring-white/20">
-                                        <AvatarImage 
-                                          src={repo.owner.avatar_url} 
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <a
+                                    href={repo.html_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center space-x-3 group cursor-pointer"
+                                  >
+                                    <Avatar className="w-8 h-8 ring-1 ring-white/10 transition-all duration-200 group-hover:ring-2 group-hover:ring-blue-400/50 group-hover:scale-110">
+                                      <AvatarImage
+                                        src={repo.owner.avatar_url || "/placeholder.svg"}
+                                        alt={`${repo.owner.login} avatar`}
+                                        className="object-cover"
+                                      />
+                                      <AvatarFallback className="bg-white/10 text-white text-sm font-medium">
+                                        {repo.owner.login.charAt(0).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <div className="font-medium text-white group-hover:text-blue-400 transition-colors duration-200">
+                                        {repo.name}
+                                      </div>
+                                      <div className="text-sm text-gray-500">{repo.owner.login}</div>
+                                    </div>
+                                  </a>
+                                </TooltipTrigger>
+                                {repo.description ? (
+                                  <TooltipContent side="right" sideOffset={8} className="max-w-xs">
+                                    <div className="flex items-start gap-3">
+                                      <Avatar className="w-8 h-8 ring-1 ring-border/40">
+                                        <AvatarImage
+                                          src={repo.owner.avatar_url || "/placeholder.svg"}
                                           alt={`${repo.owner.login} avatar`}
                                         />
-                                        <AvatarFallback className="bg-white/20 text-white font-medium">
+                                        <AvatarFallback className="text-xs">
                                           {repo.owner.login.charAt(0).toUpperCase()}
                                         </AvatarFallback>
                                       </Avatar>
-                                      <div className="flex-1">
-                                        <h4 className="font-semibold text-white mb-1">{repo.name}</h4>
-                                        <p className="text-xs text-gray-400">{repo.owner.login}</p>
+                                      <div className="space-y-1">
+                                        <p className="text-xs text-muted-foreground">{repo.owner.login}</p>
+                                        <p className="text-sm leading-relaxed">{repo.description}</p>
+                                        <div className="flex items-center gap-3 pt-1">
+                                          <span className="inline-flex items-center gap-1 text-xs">
+                                            <Star className="w-3.5 h-3.5 text-yellow-400" />
+                                            {formatNumber(repo.stargazers_count)}
+                                          </span>
+                                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                            <GitFork className="w-3.5 h-3.5" />
+                                            {formatNumber(repo.forks_count)}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                    
-                                    <p className="text-sm text-gray-200 leading-relaxed mb-3">
-                                      {repo.description}
-                                    </p>
-                                    
-                                    <div className="flex items-center gap-4 pt-3 border-t border-white/10">
-                                      <div className="flex items-center gap-1.5">
-                                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                                        <span className="text-xs text-gray-300 font-medium">{formatNumber(repo.stargazers_count)}</span>
-                                      </div>
-                                      <div className="flex items-center gap-1.5">
-                                        <GitFork className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-xs text-gray-300 font-medium">{formatNumber(repo.forks_count)}</span>
-                                      </div>
-                                      {repo.language && (
-                                        <Badge className={`${getLanguageColor(repo.language)} border text-xs`}>
-                                          {repo.language}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Shimmer effect */}
-                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent rounded-2xl animate-shimmer"></div>
-                                </div>
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            {repo.language && (
-                              <Badge className={`${getLanguageColor(repo.language)} border font-medium`}>
-                                {repo.language}
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <div className="flex flex-wrap gap-1.5">
-                              {repo.topics?.slice(0, 3).map((topic) => (
-                                <Badge 
-                                  key={topic} 
-                                  className="bg-white/5 text-gray-400 border border-white/10 text-xs font-normal hover:bg-white/10 transition-colors"
-                                >
-                                  {topic}
+                                  </TooltipContent>
+                                ) : null}
+                              </Tooltip>
+                            </td>
+                            <td className="p-4">
+                              {repo.language && (
+                                <Badge className={`${getLanguageColor(repo.language)} border font-medium`}>
+                                  {repo.language}
                                 </Badge>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="p-4 text-right">
-                            <div className="flex items-center justify-end space-x-1.5">
-                              <span className="text-white font-medium">{formatNumber(repo.stargazers_count)}</span>
-                            </div>
-                          </td>
-                          <td className="p-4 text-right">
-                            <div className="flex items-center justify-end space-x-1.5">
-                              <span className="text-gray-400 font-medium">{formatNumber(repo.forks_count)}</span>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            {getPopularityBadge(repo.stargazers_count, index)}
-                          </td>
-                        </tr>
-                      ))
+                              )}
+                            </td>
+                            <td className="hidden lg:table-cell p-4">
+                              <div className="flex flex-wrap gap-1.5">
+                                {repo.topics?.slice(0, 3).map((topic) => (
+                                  <Badge
+                                    key={topic}
+                                    className="bg-white/5 text-gray-400 border border-white/10 text-xs font-normal hover:bg-white/10 transition-colors"
+                                  >
+                                    {topic}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end space-x-1.5">
+                                <span className="text-white font-medium">{formatNumber(repo.stargazers_count)}</span>
+                              </div>
+                            </td>
+                            <td className="hidden sm:table-cell p-4 text-right">
+                              <div className="flex items-center justify-end space-x-1.5">
+                                <span className="text-gray-400 font-medium">{formatNumber(repo.forks_count)}</span>
+                              </div>
+                            </td>
+                            <td className="hidden xl:table-cell p-4">
+                              {getPopularityBadge(repo.stargazers_count, index)}
+                            </td>
+                          </tr>
+                        ))}
+                      </TooltipProvider>
                     )}
                   </tbody>
                 </table>

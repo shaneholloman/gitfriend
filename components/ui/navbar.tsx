@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
@@ -16,8 +16,12 @@ export function Navbar() {
   const [visible, setVisible] = useState(false)
   const pathname = usePathname()
   const ref = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   const { scrollY } = useScroll({
-    target: ref,
+    target: mounted ? ref : undefined,
     offset: ["start start", "end start"],
   })
 

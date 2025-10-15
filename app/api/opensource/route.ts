@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { createOctokit } from "@/lib/github"
 import { redis } from "@/lib/redis"
 
@@ -19,19 +19,17 @@ interface Repository {
   updated_at: string
 }
 
-// Default repositories to show when no filters are applied
-const DEFAULT_REPOS = [
-  "ollama/ollama",
-  "supabase/supabase",
-  "FortAwesome/Font-Awesome",
-  "FlowiseAI/flowise",
-  "payloadcms/payload",
-  "mattermost/mattermost",
-  "mindsdb/mindsdb",
-  "refinedev/refine",
-  "khoj-ai/khoj",
-  "twentyhq/twenty"
-]
+// Function to fetch trending repositories based on a given period in days
+async function fetchTrending(octokit: ReturnType<typeof createOctokit>, periodDays: number) {
+  const sinceDate = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const { data } = await octokit.search.repos({
+    q: `is:public created:>=${sinceDate} stars:>5`,
+    sort: "stars",
+    order: "desc",
+    per_page: 50,
+  })
+  return data.items
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,8 +40,8 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "stars"
 
     // Create cache key based on filters
-    const cacheKey = `opensource:${search || 'default'}:${language || 'all'}:${minStars || 'any'}:${sortBy}`
-    
+    const cacheKey = `opensource:${search || "default"}:${language || "all"}:${minStars || "any"}:${sortBy}`
+
     // Try to get from cache first
     try {
       const cached = await redis.get(cacheKey)
@@ -61,8 +59,6 @@ export async function GET(request: NextRequest) {
     const hasSearchFilter = search && search.trim() !== ""
     const hasLanguageFilter = language && language !== "all"
     const hasMinStarsFilter = minStars && minStars !== "any"
-
-    console.log("API Debug:", { search, language, minStars, sortBy, hasSearchFilter, hasLanguageFilter, hasMinStarsFilter })
 
     if (hasSearchFilter || hasLanguageFilter || hasMinStarsFilter) {
       // Build search query
@@ -95,36 +91,42 @@ export async function GET(request: NextRequest) {
         updated_at: repo.updated_at,
       }))
     } else {
-      // Fetch default repositories
-      console.log("Fetching default repositories:", DEFAULT_REPOS)
-      const repoPromises = DEFAULT_REPOS.map(async (repoFullName) => {
-        try {
-          const [owner, repo] = repoFullName.split("/")
-          const { data } = await octokit.repos.get({ owner, repo })
-          return {
-            id: data.id,
-            name: data.name,
-            full_name: data.full_name,
-            description: data.description || "",
-            language: data.language || "",
-            stargazers_count: data.stargazers_count,
-            forks_count: data.forks_count,
-            topics: data.topics || [],
-            html_url: data.html_url,
-            owner: {
-              login: data.owner.login,
-              avatar_url: data.owner.avatar_url,
-            },
-            updated_at: data.updated_at,
-          }
-        } catch (error) {
-          console.error(`Error fetching ${repoFullName}:`, error)
-          return null
+      // Dynamic trending fallback (no static list)
+      // Try weekly trending first, then 90-day window, then all-time by stars as last resort
+      let items: any[] = []
+      try {
+        items = await fetchTrending(octokit, 14)
+        if (!items || items.length < 10) {
+          items = await fetchTrending(octokit, 90)
         }
-      })
-
-      const results = await Promise.all(repoPromises)
-      repositories = results.filter((repo): repo is Repository => repo !== null)
+      } catch {
+        // ignore and try broader search below
+      }
+      if (!items || items.length === 0) {
+        const { data } = await octokit.search.repos({
+          q: "is:public stars:>20000",
+          sort: "stars",
+          order: "desc",
+          per_page: 50,
+        })
+        items = data.items
+      }
+      repositories = items.map((repo: any) => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        description: repo.description || "",
+        language: repo.language || "",
+        stargazers_count: repo.stargazers_count,
+        forks_count: repo.forks_count,
+        topics: repo.topics || [],
+        html_url: repo.html_url,
+        owner: {
+          login: repo.owner.login,
+          avatar_url: repo.owner.avatar_url,
+        },
+        updated_at: repo.updated_at,
+      }))
     }
 
     // Sort repositories based on sortBy parameter
@@ -153,9 +155,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ repositories })
   } catch (error) {
     console.error("Error fetching repositories:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch repositories" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to fetch repositories" }, { status: 500 })
   }
 }

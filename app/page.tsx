@@ -35,13 +35,19 @@ export default function LandingPage() {
   const { theme, setTheme } = useTheme()
   const isHowItWorksInView = useInView(howItWorksRef, { once: false, amount: 0.2 })
 
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const { scrollYProgress } = useScroll({
-    target: heroRef,
+    target: mounted ? heroRef : undefined,
     offset: ["start start", "end start"],
   })
 
   const { scrollYProgress: howItWorksScrollProgress } = useScroll({
-    target: howItWorksRef,
+    target: mounted ? howItWorksRef : undefined,
     offset: ["start end", "end start"],
   })
 
@@ -208,11 +214,6 @@ export default function LandingPage() {
   }, [])
 
   const { theme: systemTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   if (!mounted) return null // avoid SSR mismatch
 
