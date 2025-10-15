@@ -22,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body suppressHydrationWarning className={inter.className}>
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
             <Suspense>{children}</Suspense>

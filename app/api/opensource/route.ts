@@ -38,11 +38,17 @@ export async function GET(request: NextRequest) {
     const language = searchParams.get("language") || ""
     const minStars = searchParams.get("minStars") || ""
     const sortBy = searchParams.get("sortBy") || "stars"
+    const trending = searchParams.get("trending") // "1" to force trending mode
+    const trendingPeriod = (searchParams.get("trendingPeriod") || "day") as "day" | "month" | "year"
 
-    // Create cache key based on filters
-    const cacheKey = `opensource:${search || "default"}:${language || "all"}:${minStars || "any"}:${sortBy}`
+    const periodDays = trendingPeriod === "day" ? 1 : trendingPeriod === "month" ? 30 : 365
 
-    // Try to get from cache first
+    // Include trending in cache key
+    const cacheKey =
+      trending === "1"
+        ? `opensource:trending:${trendingPeriod}:${sortBy}`
+        : `opensource:${search || "default"}:${language || "all"}:${minStars || "any"}:${sortBy}`
+
     try {
       const cached = await redis.get(cacheKey)
       if (cached) {
@@ -55,52 +61,18 @@ export async function GET(request: NextRequest) {
     const octokit = createOctokit()
     let repositories: Repository[] = []
 
-    // Check if we have actual filters (not default values)
-    const hasSearchFilter = search && search.trim() !== ""
-    const hasLanguageFilter = language && language !== "all"
-    const hasMinStarsFilter = minStars && minStars !== "any"
-
-    if (hasSearchFilter || hasLanguageFilter || hasMinStarsFilter) {
-      // Build search query
-      let query = "is:public"
-      if (hasSearchFilter) query += ` ${search} in:name,description`
-      if (hasLanguageFilter) query += ` language:${language}`
-      if (hasMinStarsFilter) query += ` stars:>=${minStars}`
-
-      const { data } = await octokit.search.repos({
-        q: query,
-        sort: sortBy === "stars" ? "stars" : sortBy === "forks" ? "forks" : "updated",
-        order: "desc",
-        per_page: 50,
-      })
-
-      repositories = data.items.map((repo: any) => ({
-        id: repo.id,
-        name: repo.name,
-        full_name: repo.full_name,
-        description: repo.description || "",
-        language: repo.language || "",
-        stargazers_count: repo.stargazers_count,
-        forks_count: repo.forks_count,
-        topics: repo.topics || [],
-        html_url: repo.html_url,
-        owner: {
-          login: repo.owner.login,
-          avatar_url: repo.owner.avatar_url,
-        },
-        updated_at: repo.updated_at,
-      }))
-    } else {
-      // Dynamic trending fallback (no static list)
-      // Try weekly trending first, then 90-day window, then all-time by stars as last resort
+    // Trending takes precedence when requested
+    if (trending === "1") {
       let items: any[] = []
       try {
-        items = await fetchTrending(octokit, 14)
+        items = await fetchTrending(octokit, periodDays)
+        // ensure we always have 50 results if possible
         if (!items || items.length < 10) {
-          items = await fetchTrending(octokit, 90)
+          const fallbackDays = periodDays < 30 ? 30 : 90
+          items = await fetchTrending(octokit, fallbackDays)
         }
       } catch {
-        // ignore and try broader search below
+        // ignore; handled by final fallback
       }
       if (!items || items.length === 0) {
         const { data } = await octokit.search.repos({
@@ -111,7 +83,7 @@ export async function GET(request: NextRequest) {
         })
         items = data.items
       }
-      repositories = items.map((repo: any) => ({
+      repositories = items.slice(0, 50).map((repo: any) => ({
         id: repo.id,
         name: repo.name,
         full_name: repo.full_name,
@@ -121,12 +93,83 @@ export async function GET(request: NextRequest) {
         forks_count: repo.forks_count,
         topics: repo.topics || [],
         html_url: repo.html_url,
-        owner: {
-          login: repo.owner.login,
-          avatar_url: repo.owner.avatar_url,
-        },
+        owner: { login: repo.owner.login, avatar_url: repo.owner.avatar_url },
         updated_at: repo.updated_at,
       }))
+    } else {
+      // Check if we have actual filters (not default values)
+      const hasSearchFilter = search && search.trim() !== ""
+      const hasLanguageFilter = language && language !== "all"
+      const hasMinStarsFilter = minStars && minStars !== "any"
+
+      if (hasSearchFilter || hasLanguageFilter || hasMinStarsFilter) {
+        // Build search query
+        let query = "is:public"
+        if (hasSearchFilter) query += ` ${search} in:name,description`
+        if (hasLanguageFilter) query += ` language:${language}`
+        if (hasMinStarsFilter) query += ` stars:>=${minStars}`
+
+        const { data } = await octokit.search.repos({
+          q: query,
+          sort: sortBy === "stars" ? "stars" : sortBy === "forks" ? "forks" : "updated",
+          order: "desc",
+          per_page: 50,
+        })
+
+        repositories = data.items.map((repo: any) => ({
+          id: repo.id,
+          name: repo.name,
+          full_name: repo.full_name,
+          description: repo.description || "",
+          language: repo.language || "",
+          stargazers_count: repo.stargazers_count,
+          forks_count: repo.forks_count,
+          topics: repo.topics || [],
+          html_url: repo.html_url,
+          owner: {
+            login: repo.owner.login,
+            avatar_url: repo.owner.avatar_url,
+          },
+          updated_at: repo.updated_at,
+        }))
+      } else {
+        // Dynamic trending fallback (no static list)
+        // Try weekly trending first, then 90-day window, then all-time by stars as last resort
+        let items: any[] = []
+        try {
+          items = await fetchTrending(octokit, 14)
+          if (!items || items.length < 10) {
+            items = await fetchTrending(octokit, 90)
+          }
+        } catch {
+          // ignore and try broader search below
+        }
+        if (!items || items.length === 0) {
+          const { data } = await octokit.search.repos({
+            q: "is:public stars:>20000",
+            sort: "stars",
+            order: "desc",
+            per_page: 50,
+          })
+          items = data.items
+        }
+        repositories = items.map((repo: any) => ({
+          id: repo.id,
+          name: repo.name,
+          full_name: repo.full_name,
+          description: repo.description || "",
+          language: repo.language || "",
+          stargazers_count: repo.stargazers_count,
+          forks_count: repo.forks_count,
+          topics: repo.topics || [],
+          html_url: repo.html_url,
+          owner: {
+            login: repo.owner.login,
+            avatar_url: repo.owner.avatar_url,
+          },
+          updated_at: repo.updated_at,
+        }))
+      }
     }
 
     // Sort repositories based on sortBy parameter

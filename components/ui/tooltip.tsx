@@ -94,36 +94,31 @@ const TooltipContent = React.forwardRef<React.ElementRef<typeof TooltipPrimitive
         align={align}
         alignOffset={alignOffset}
         className={cn(
-          "z-50 w-fit rounded-md border bg-background/95 text-foreground shadow-md backdrop-blur-sm relative",
+          "z-50 w-fit rounded-md border border-[hsl(var(--border))/60] bg-[hsl(var(--popover)/0.82)] text-[hsl(var(--popover-foreground))] shadow-md backdrop-blur-md relative",
+          "will-change-transform will-change-opacity",
           className,
         )}
         {...props}
       >
-        {/* Subtle texture overlay using CSS vars (no neon/glow) */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-15"
           style={{
-            backgroundImage: "radial-gradient(var(--border) 0.75px, transparent 0.75px)",
+            backgroundImage: "radial-gradient(hsl(var(--border)) 0.75px, transparent 0.75px)",
             backgroundSize: "7px 7px",
           }}
         />
         <motion.div
           className="overflow-hidden px-3 py-1.5 text-xs text-pretty"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 35,
-            duration: 0.2,
-          }}
+          initial={{ opacity: 0, scale: 0.96, filter: "blur(6px) saturate(0.95) brightness(0.98)" }}
+          animate={{ opacity: 1, scale: 1, filter: "blur(0px) saturate(1) brightness(1)" }}
+          exit={{ opacity: 0, scale: 0.96, filter: "blur(6px) saturate(0.95) brightness(0.98)" }}
+          transition={{ type: "spring", stiffness: 300, damping: 30, duration: 0.18 }}
           layout={layout}
         >
           <motion.div layout={layout}>{children}</motion.div>
         </motion.div>
-        <TooltipPrimitive.Arrow className="fill-border" />
+        <TooltipPrimitive.Arrow className="fill-[hsl(var(--border)/0.6)]" />
       </TooltipPrimitive.Content>
     )
   },
