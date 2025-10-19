@@ -94,19 +94,16 @@ const TooltipContent = React.forwardRef<React.ElementRef<typeof TooltipPrimitive
         align={align}
         alignOffset={alignOffset}
         className={cn(
-          "z-50 w-fit rounded-md border border-[hsl(var(--border))/60] bg-[hsl(var(--popover)/0.82)] text-[hsl(var(--popover-foreground))] shadow-md backdrop-blur-md relative",
+          "z-50 w-fit rounded-md border border-white/20 bg-black/80 text-white shadow-2xl backdrop-blur-xl relative",
           "will-change-transform will-change-opacity",
+          "before:absolute before:inset-0 before:rounded-md before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none",
           className,
         )}
         {...props}
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-15"
-          style={{
-            backgroundImage: "radial-gradient(hsl(var(--border)) 0.75px, transparent 0.75px)",
-            backgroundSize: "7px 7px",
-          }}
+          className="pointer-events-none absolute inset-0 rounded-md bg-gradient-to-br from-white/5 via-transparent to-black/20"
         />
         <motion.div
           className="overflow-hidden px-3 py-1.5 text-xs text-pretty"
@@ -118,7 +115,7 @@ const TooltipContent = React.forwardRef<React.ElementRef<typeof TooltipPrimitive
         >
           <motion.div layout={layout}>{children}</motion.div>
         </motion.div>
-        <TooltipPrimitive.Arrow className="fill-[hsl(var(--border)/0.6)]" />
+        <TooltipPrimitive.Arrow className="fill-white/20" />
       </TooltipPrimitive.Content>
     )
   },

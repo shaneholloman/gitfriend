@@ -112,6 +112,24 @@ const config = {
             opacity: "0",
           },
         },
+        "slide-up-fade": {
+          "0%": {
+            opacity: "0",
+            transform: "translateY(var(--offset, 10px))",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translateY(0)",
+          },
+        },
+        "fade-in": {
+          "0%": {
+            opacity: "0",
+          },
+          "100%": {
+            opacity: "1",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -121,6 +139,9 @@ const config = {
         "text-gradient": "text-gradient 1.5s linear infinite",
         "spin-slow": "spin-slow 8s linear infinite",
         "shimmer-wave": "shimmer-wave calc(var(--duration) * 2) ease-in-out calc(var(--delay) * -1) infinite",
+        "slide-up-fade": "slide-up-fade 1s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-in": "fade-in 0.2s ease-in-out forwards",
+        "fade-in-out": "fadeInOut 3s ease-in-out infinite",
       },
     },
     // Add this to the base section of the CSS:
