@@ -94,28 +94,28 @@ const TooltipContent = React.forwardRef<React.ElementRef<typeof TooltipPrimitive
         align={align}
         alignOffset={alignOffset}
         className={cn(
-          "z-50 w-fit rounded-md border border-white/20 bg-black/80 text-white shadow-2xl backdrop-blur-xl relative",
+          "z-50 w-fit rounded-lg border border-white/40 bg-white/95 text-gray-900 shadow-2xl relative",
           "will-change-transform will-change-opacity",
-          "before:absolute before:inset-0 before:rounded-md before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none",
+          "before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-br before:from-white/60 before:to-white/30 before:pointer-events-none",
           className,
         )}
         {...props}
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-md bg-gradient-to-br from-white/5 via-transparent to-black/20"
+          className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-br from-white/40 via-white/20 to-transparent"
         />
         <motion.div
-          className="overflow-hidden px-3 py-1.5 text-xs text-pretty"
-          initial={{ opacity: 0, scale: 0.96, filter: "blur(6px) saturate(0.95) brightness(0.98)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px) saturate(1) brightness(1)" }}
-          exit={{ opacity: 0, scale: 0.96, filter: "blur(6px) saturate(0.95) brightness(0.98)" }}
+          className="overflow-hidden px-3 py-2 text-sm font-medium text-pretty relative z-10"
+          initial={{ opacity: 0, scale: 0.96, filter: "blur(4px)" }}
+          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+          exit={{ opacity: 0, scale: 0.96, filter: "blur(4px)" }}
           transition={{ type: "spring", stiffness: 300, damping: 30, duration: 0.18 }}
           layout={layout}
         >
           <motion.div layout={layout}>{children}</motion.div>
         </motion.div>
-        <TooltipPrimitive.Arrow className="fill-white/20" />
+        <TooltipPrimitive.Arrow className="fill-white/95" />
       </TooltipPrimitive.Content>
     )
   },
