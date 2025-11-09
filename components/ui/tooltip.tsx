@@ -94,7 +94,7 @@ const TooltipContent = React.forwardRef<React.ElementRef<typeof TooltipPrimitive
         align={align}
         alignOffset={alignOffset}
         className={cn(
-          "z-50 w-fit rounded-lg border border-white/40 bg-white/95 text-gray-900 shadow-2xl relative",
+          "z-50 w-fit rounded-lg border border-white/40 bg-white/95 backdrop-blur-md text-gray-900 shadow-2xl relative",
           "will-change-transform will-change-opacity",
           "before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-br before:from-white/60 before:to-white/30 before:pointer-events-none",
           className,

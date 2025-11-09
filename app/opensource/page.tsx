@@ -5,12 +5,11 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ClientOnly } from "@/components/ui/client-only"
-import { Search, Home, TrendingUp, Compass, ChevronRight, PanelLeftOpen, PanelLeft } from "lucide-react"
+import { Search, Home, TrendingUp, Compass } from "lucide-react"
 import { HomeSection } from "@/components/opensource/home-section"
 import { BeamsBackground } from "@/components/opensource/bg-beams"
 import { TrendingSection } from "@/components/opensource/trending-section"
 import { DiscoverSection } from "@/components/opensource/discover-section"
-import { News, type NewsArticle } from "@/components/ui/sidebar-news"
 
 type Repo = {
   id: number
@@ -25,66 +24,18 @@ type Repo = {
   owner: { login: string; avatar_url: string }
 }
 
-const NEWS_ARTICLES: NewsArticle[] = [
-  {
-    href: "https://github.com/krishn404/Git-Friend",
-    title: "Git-Friend v2.0 Released!",
-    summary: "New AI-powered features, enhanced README generation, and improved Git workflow assistance. Check out the latest updates!",
-    image: "mesh-gradient-1",
-  },
-  {
-    href: "https://github.com/krishn404/Git-Friend/discussions",
-    title: "Promote Your Repository",
-    summary: "Want to showcase your amazing open-source project? DM us to get featured in our trending repositories section!",
-    image: "mesh-gradient-2",
-  },
-  {
-    href: "https://github.com/krishn404/Git-Friend/issues",
-    title: "New Git Emoji Generator",
-    summary: "Create expressive commit messages with our enhanced emoji generator. Make your Git history more readable and fun!",
-    image: "mesh-gradient-3",
-  },
-  {
-    href: "https://github.com/krishn404/Git-Friend/releases",
-    title: "AI Chat Improvements",
-    summary: "Our AI assistant now understands more Git commands and provides better context-aware suggestions for your workflow.",
-    image: "mesh-gradient-4",
-  },
-  {
-    href: "https://github.com/krishn404/Git-Friend/wiki",
-    title: "Community Spotlight",
-    summary: "Share your success stories with Git-Friend! How has it improved your development workflow? We'd love to hear from you.",
-    image: "mesh-gradient-5",
-  },
-]
-
 export default function OpenSourcePage() {
   const [repositories, setRepositories] = useState<Repo[]>([])
   const [loading, setLoading] = useState(true)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeNav, setActiveNav] = useState<"home" | "trending" | "discover">("home")
   const [trendingPeriod, setTrendingPeriod] = useState<"day" | "month" | "year">("day")
   const [hoveredRepo, setHoveredRepo] = useState<number | null>(null)
-  const [isTransitioning, setIsTransitioning] = useState(false)
   const [filters, setFilters] = useState({
     search: "",
     language: "all",
     minStars: "any",
     sortBy: "stars",
   })
-
-  // Debounced sidebar toggle to prevent rapid clicking
-  const toggleSidebar = () => {
-    if (isTransitioning) return
-    
-    setIsTransitioning(true)
-    setSidebarOpen(!sidebarOpen)
-    
-    // Reset transition lock after animation completes
-    setTimeout(() => {
-      setIsTransitioning(false)
-    }, 300)
-  }
 
   useEffect(() => {
     fetchRepositories()
@@ -168,83 +119,10 @@ export default function OpenSourcePage() {
   return (
     <div className="relative min-h-screen text-white">
       <BeamsBackground className="fixed inset-0 -z-10" />
-      <div className="relative flex md:overflow-hidden" style={{ contain: "layout" }}>
-        <aside
-          className={[
-            "sidebar-container sidebar-transition fixed z-20 top-0 left-0 h-screen w-64 border-r border-white/10 p-6 flex-col bg-black/40 backdrop-blur-md",
-            "hidden md:flex",
-          ].join(" ")}
-          style={{
-            transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
-          }}
-          aria-hidden={!sidebarOpen}
-        >
-          {/* Sidebar Header with Panel Toggle */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-white">Git Friend</h2>
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
-              aria-label="Close sidebar"
-              disabled={isTransitioning}
-            >
-              <PanelLeft className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="space-y-8 flex-1 overflow-y-auto">
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-4">General</p>
-              <div className="space-y-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon
-                  const isActive = activeNav === item.id
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveNav(item.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 group ${
-                        isActive ? "bg-white/10 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }`}
-                      aria-pressed={isActive}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className="w-4 h-4" />
-                        <span className="text-sm font-medium">{item.label}</span>
-                      </div>
-                      {isActive && <ChevronRight className="w-4 h-4" />}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* News Section */}
-          <div className="mt-8">
-            <News articles={NEWS_ARTICLES} />
-          </div>
-        </aside>
-
-        <main
-          className="main-content main-transition flex-1 flex flex-col min-h-screen relative"
-          style={{
-            marginLeft: sidebarOpen ? "256px" : "0px",
-          }}
-        >
+      <div className="relative" style={{ contain: "layout" }}>
+        <main className="main-content flex flex-col min-h-screen relative w-full">
           <div className="sticky top-0 z-30 backdrop-blur-lg bg-black/30 border-b border-white/10">
             <div className="px-4 md:px-8 py-3 flex items-center justify-between min-h-[60px]">
-              {!sidebarOpen && (
-                <button
-                  onClick={toggleSidebar}
-                  className="hidden md:inline-flex items-center justify-center p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
-                  aria-label="Open sidebar"
-                  disabled={isTransitioning}
-                >
-                  <PanelLeftOpen className="w-5 h-5" />
-                </button>
-              )}
-
               <div className="md:hidden w-full">
                 <div className="flex gap-2 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {navItems.map((item) => {
