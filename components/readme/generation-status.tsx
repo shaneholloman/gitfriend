@@ -65,8 +65,20 @@ export function GenerationStatus({
       setProgress(75)
     }, 6000)
 
-    // Poll for README generation status
-    const pollInterval = setInterval(async () => {
+    return () => {
+      clearTimeout(step1Timeout)
+      clearTimeout(step2Timeout)
+      clearTimeout(step3Timeout)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!repoUrl) return
+    if (status === "completed" || status === "failed") return
+
+    let cancelled = false
+
+    const pollStatus = async () => {
       try {
         const statusResponse = await fetch(`/api/generate-readme?repoUrl=${encodeURIComponent(repoUrl)}`)
 
@@ -76,47 +88,51 @@ export function GenerationStatus({
 
         const statusData = await statusResponse.json()
 
+        if (cancelled) return
+
+        setStatus(statusData.status ?? "not_started")
+
         if (statusData.status === "completed" && statusData.readme) {
-          clearInterval(pollInterval)
-          setStatus("completed")
           setProgress(100)
           onComplete(statusData.readme)
         } else if (statusData.status === "failed") {
-          clearInterval(pollInterval)
-          setStatus("failed")
           setError("README generation failed")
           setTimeout(() => {
             onClose()
           }, 3000)
         }
-        // Continue polling for pending or processing status
       } catch (error) {
-        clearInterval(pollInterval)
+        if (cancelled) return
         console.error("Error checking README status:", error)
+        setStatus("failed")
         setError(error instanceof Error ? error.message : "Failed to generate README")
         setTimeout(() => {
           onClose()
         }, 3000)
       }
-    }, 3000) // Poll every 3 seconds
+    }
 
-    // Set a timeout to stop polling after 2 minutes
-    const timeoutId = setTimeout(() => {
-      clearInterval(pollInterval)
+    // Initial poll
+    pollStatus()
+
+    const pollInterval = window.setInterval(() => {
+      void pollStatus()
+    }, 8000)
+
+    const timeoutId = window.setTimeout(() => {
+      if (cancelled) return
       setError("README generation is taking longer than expected. Please try again later.")
       setTimeout(() => {
         onClose()
       }, 3000)
-    }, 120000) // 2 minutes
+    }, 120000)
 
     return () => {
-      clearTimeout(step1Timeout)
-      clearTimeout(step2Timeout)
-      clearTimeout(step3Timeout)
+      cancelled = true
       clearInterval(pollInterval)
       clearTimeout(timeoutId)
     }
-  }, [repoUrl, onComplete, onClose])
+  }, [repoUrl, onComplete, onClose, status])
 
   return (
     <div className="bg-[hsl(var(--readme-card-bg))] border-2 border-[hsl(var(--readme-border))] rounded-xl shadow-xl max-w-2xl w-full p-8 relative">

@@ -266,6 +266,14 @@ async function fetchRepoTreeAndContents(
   return collected
 }
 
+async function releaseReadmeLock(repoUrl: string) {
+  try {
+    await redis.del(CACHE_KEYS.README_LOCK(repoUrl))
+  } catch (error) {
+    console.error(`[README] Failed to release lock for ${repoUrl}`, error)
+  }
+}
+
 // Check if README generation is already in progress or completed
 export async function GET(req: NextRequest) {
   try {
@@ -287,6 +295,20 @@ export async function GET(req: NextRequest) {
 
     // Check the status of generation
     const status = await redis.get<ReadmeGenerationStatus>(CACHE_KEYS.README_STATUS(repoUrl))
+
+    const rateLimitKey = CACHE_KEYS.README_RATE_LIMIT(repoUrl)
+    const now = Date.now()
+    const lastRequest = await redis.get<string>(rateLimitKey)
+
+    if (lastRequest && now - Number(lastRequest) < CACHE_TTL.STATUS_POLL_COOLDOWN * 1000) {
+      console.info(`[README] Rate limit hit for status check on ${repoUrl}`)
+      return NextResponse.json({
+        status: status || "not_started",
+        rateLimited: true,
+      })
+    }
+
+    await redis.set(rateLimitKey, String(now), { ex: CACHE_TTL.STATUS_POLL_COOLDOWN })
 
     return NextResponse.json({
       status: status || "not_started",
@@ -326,8 +348,20 @@ export async function POST(req: NextRequest) {
     // Check if generation is already in progress
     const status = await redis.get<ReadmeGenerationStatus>(CACHE_KEYS.README_STATUS(repoUrl))
     if (status === "processing" || status === "pending") {
+      console.info(`[README] Skipping generation for ${repoUrl}; current status: ${status}`)
       return NextResponse.json({
         status: status,
+        message: "README generation is already in progress",
+      })
+    }
+
+    const lockKey = CACHE_KEYS.README_LOCK(repoUrl)
+    const lockAcquired = await redis.set(lockKey, Date.now().toString(), { ex: CACHE_TTL.LOCK, nx: true })
+
+    if (!lockAcquired) {
+      console.info(`[README] Skipping generation for ${repoUrl} due to active lock`)
+      return NextResponse.json({
+        status: status || "pending",
         message: "README generation is already in progress",
       })
     }
@@ -336,7 +370,10 @@ export async function POST(req: NextRequest) {
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "pending", { ex: CACHE_TTL.STATUS })
 
     // Start the generation process in the background
-    generateReadmeInBackground(repoUrl, customInstructions)
+    console.info(`[README] Starting background generation for ${repoUrl}`)
+    generateReadmeInBackground(repoUrl, customInstructions).catch((error) => {
+      console.error(`[README] Background generation failed for ${repoUrl}`, error)
+    })
 
     return NextResponse.json({
       status: "pending",
@@ -417,10 +454,13 @@ async function generateReadmeInBackground(repoUrl: string, customInstructions?: 
 
     await redis.set(CACHE_KEYS.README_GENERATION(repoUrl), generatedReadme, { ex: CACHE_TTL.README })
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "completed", { ex: CACHE_TTL.STATUS })
+    console.info(`[README] Completed background generation for ${repoUrl}`)
     return generatedReadme
   } catch (error) {
     console.error("[v0] Error generating README:", error)
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "failed", { ex: CACHE_TTL.STATUS })
     throw error
+  } finally {
+    await releaseReadmeLock(repoUrl)
   }
 }

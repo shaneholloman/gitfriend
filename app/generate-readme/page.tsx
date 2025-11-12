@@ -99,6 +99,8 @@ export default function GenerateReadme() {
   })
   const { isGuest, guestTimeLeft, guestLogout } = useAuth()
   const [showGuestExpired, setShowGuestExpired] = useState(false)
+  const pollIntervalRef = useRef<number | null>(null)
+  const pollTimeoutRef = useRef<number | null>(null)
 
   // Show modal and block actions when guest session expires
   useEffect(() => {
@@ -107,6 +109,19 @@ export default function GenerateReadme() {
       guestLogout()
     }
   }, [isGuest, guestTimeLeft, guestLogout])
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
+      }
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current)
+        pollTimeoutRef.current = null
+      }
+    }
+  }, [])
 
   // Steps in the generation process
   const steps = [
@@ -243,6 +258,56 @@ export default function GenerateReadme() {
         return
       }
 
+      const clearPollingTimers = () => {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current)
+          pollIntervalRef.current = null
+        }
+        if (pollTimeoutRef.current) {
+          clearTimeout(pollTimeoutRef.current)
+          pollTimeoutRef.current = null
+        }
+      }
+
+      clearPollingTimers()
+
+      const pollStatus = async () => {
+        try {
+          const statusResponse = await fetch(`/api/generate-readme?repoUrl=${encodeURIComponent(repoUrl)}`)
+
+          if (!statusResponse.ok) {
+            throw new Error("Failed to check README generation status")
+          }
+
+          const statusData = await statusResponse.json()
+
+          if (statusData.status === "completed" && statusData.readme) {
+            clearPollingTimers()
+            setGeneratedReadme(statusData.readme)
+            setProgress(100)
+
+            setTimeout(() => {
+              setShowOverlay(false)
+              setIsGenerating(false)
+            }, 1500)
+          } else if (statusData.status === "failed") {
+            clearPollingTimers()
+            setError("README generation failed. This might be due to rate limiting or API issues. Please try again in a few minutes.")
+            setIsGenerating(false)
+            setShowOverlay(false)
+          }
+          // Continue polling for pending or processing status
+        } catch (error) {
+          clearPollingTimers()
+          console.error("Error checking README status:", error)
+          setError(error instanceof Error ? error.message : "Failed to generate README")
+          setIsGenerating(false)
+          setShowOverlay(false)
+        }
+      }
+
+      await pollStatus()
+
       // Move to step 1 - Analyzing Code Structure
       setTimeout(() => {
         setCurrentStep(1)
@@ -261,47 +326,14 @@ export default function GenerateReadme() {
         setProgress(75)
       }, 6000)
 
-      // Poll for README generation status
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusResponse = await fetch(`/api/generate-readme?repoUrl=${encodeURIComponent(repoUrl)}`)
-
-          if (!statusResponse.ok) {
-            throw new Error("Failed to check README generation status")
-          }
-
-          const statusData = await statusResponse.json()
-
-          if (statusData.status === "completed" && statusData.readme) {
-            clearInterval(pollInterval)
-            setGeneratedReadme(statusData.readme)
-            setProgress(100)
-
-            // Keep overlay visible for a moment to show completion
-            setTimeout(() => {
-              setShowOverlay(false)
-              setIsGenerating(false)
-            }, 1500)
-          } else if (statusData.status === "failed") {
-            clearInterval(pollInterval)
-            setError("README generation failed. This might be due to rate limiting or API issues. Please try again in a few minutes.")
-            setIsGenerating(false)
-            setShowOverlay(false)
-            return
-          }
-          // Continue polling for pending or processing status
-        } catch (error) {
-          clearInterval(pollInterval)
-          console.error("Error checking README status:", error)
-          setError(error instanceof Error ? error.message : "Failed to generate README")
-          setIsGenerating(false)
-          setShowOverlay(false)
-        }
-      }, 3000) // Poll every 3 seconds
+      // Poll for README generation status every 8 seconds
+      pollIntervalRef.current = window.setInterval(() => {
+        void pollStatus()
+      }, 8000)
 
       // Set a timeout to stop polling after 2 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval)
+      pollTimeoutRef.current = window.setTimeout(() => {
+        clearPollingTimers()
         if (isGenerating) {
           setError("README generation is taking longer than expected. Please try again later.")
           setIsGenerating(false)
@@ -313,6 +345,14 @@ export default function GenerateReadme() {
       setError(error instanceof Error ? error.message : "Failed to generate README")
       setIsGenerating(false)
       setShowOverlay(false)
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
+      }
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current)
+        pollTimeoutRef.current = null
+      }
     }
   }
 

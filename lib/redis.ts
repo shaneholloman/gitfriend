@@ -1,6 +1,11 @@
 import { Redis } from "@upstash/redis"
 
 // Minimal in-memory fallback with TTL support for local/dev when Upstash is not configured
+type SetOptions = {
+  ex?: number
+  nx?: boolean
+}
+
 class InMemoryRedisFallback {
   private store = new Map<string, { value: unknown; expiresAt?: number }>()
 
@@ -14,17 +19,32 @@ class InMemoryRedisFallback {
     return (entry.value as T) ?? null
   }
 
-  async set(key: string, value: unknown, opts?: { ex?: number }): Promise<"OK"> {
+  async set(key: string, value: unknown, opts?: SetOptions): Promise<"OK" | null> {
+    const existing = await this.get(key)
+
+    if (opts?.nx && existing !== null) {
+      return null
+    }
+
     const expiresAt = typeof opts?.ex === "number" ? Date.now() + opts.ex * 1000 : undefined
     this.store.set(key, { value, expiresAt })
     return "OK"
+  }
+
+  async del(key: string): Promise<number> {
+    const existed = this.store.delete(key)
+    return existed ? 1 : 0
   }
 }
 
 // Initialize Redis client, with automatic fallback to in-memory if unreachable
 const hasUpstash = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
 
-type RedisLike = Pick<Redis, "get" | "set">
+type RedisLike = {
+  get<T = unknown>(key: string): Promise<T | null>
+  set(key: string, value: unknown, opts?: SetOptions): Promise<"OK" | null>
+  del(key: string): Promise<number>
+}
 
 function isTransientNetworkError(error: unknown): boolean {
   const anyErr = error as any
@@ -86,7 +106,7 @@ class HybridRedis implements RedisLike {
     return await this.fallback.get<T>(key)
   }
 
-  async set(key: string, value: unknown, opts?: { ex?: number }): Promise<"OK"> {
+  async set(key: string, value: unknown, opts?: SetOptions): Promise<"OK" | null> {
     if (this.primary && !this.usingFallback) {
       try {
         return await this.primary.set(key, value as any, opts as any)
@@ -104,6 +124,25 @@ class HybridRedis implements RedisLike {
     }
     return await this.fallback.set(key, value, opts)
   }
+
+  async del(key: string): Promise<number> {
+    if (this.primary && !this.usingFallback) {
+      try {
+        return await this.primary.del(key)
+      } catch (err) {
+        if (process.env.NODE_ENV !== "production" || isTransientNetworkError(err)) {
+          this.usingFallback = true
+          console.warn(
+            "[Git-Friend] Upstash unreachable during delete. Switching to in-memory cache for deletes.",
+            (err as Error)?.message || err,
+          )
+          return await this.fallback.del(key)
+        }
+        throw err
+      }
+    }
+    return await this.fallback.del(key)
+  }
 }
 
 export const redis: RedisLike = new HybridRedis()
@@ -115,10 +154,14 @@ export type ReadmeGenerationStatus = "pending" | "processing" | "completed" | "f
 export const CACHE_KEYS = {
   README_GENERATION: (repoUrl: string) => `readme:${repoUrl}`,
   README_STATUS: (repoUrl: string) => `readme:status:${repoUrl}`,
+  README_LOCK: (repoUrl: string) => `readme:lock:${repoUrl}`,
+  README_RATE_LIMIT: (repoUrl: string) => `readme:rate:${repoUrl}`,
 }
 
 // Cache TTLs in seconds
 export const CACHE_TTL = {
   README: 7 * 24 * 60 * 60, // 7 days
   STATUS: 24 * 60 * 60, // 1 day
+  LOCK: 60, // 1 minute lock
+  STATUS_POLL_COOLDOWN: 5, // 5 seconds rate limit for status polling
 }
