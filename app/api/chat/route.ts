@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         }
       } catch (e) {
         // Non-fatal: continue without context
-        console.warn("[v0] Repo analysis for chat failed:", e)
+        console.warn("gitf Repo analysis for chat failed:", e)
       }
     }
 
@@ -89,7 +89,7 @@ ${repoContextBlock}`,
           controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
           controller.close()
         } catch (error) {
-          console.error("[v0] Stream processing error:", error)
+          console.error("gitf Stream processing error:", error)
           controller.error(error)
         }
       },
@@ -103,7 +103,7 @@ ${repoContextBlock}`,
       },
     })
   } catch (error: any) {
-    console.error("[v0] Groq API Error:", error)
+    console.error("gitf Groq API Error:", error)
     return NextResponse.json(
       { error: "Failed to get response from Groq", details: error?.message || "unknown" },
       { status: 500 },

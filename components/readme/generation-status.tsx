@@ -59,11 +59,11 @@ export function GenerationStatus({
       setProgress(50)
     }, 4000)
 
-    // Move to step 3 - Formatting Content
+    // Move to step 3 - Formatting Content (longer delay for Groq API call)
     const step3Timeout = setTimeout(() => {
       setCurrentStep(3)
       setProgress(75)
-    }, 6000)
+    }, 10000) // Increased from 6000 to 10000 to account for API processing time
 
     return () => {
       clearTimeout(step1Timeout)
@@ -96,7 +96,7 @@ export function GenerationStatus({
           setProgress(100)
           onComplete(statusData.readme)
         } else if (statusData.status === "failed") {
-          setError("README generation failed")
+          setError(statusData.error || "README generation failed")
           setTimeout(() => {
             onClose()
           }, 3000)
@@ -125,7 +125,7 @@ export function GenerationStatus({
       setTimeout(() => {
         onClose()
       }, 3000)
-    }, 120000)
+    }, 180000) // Increased from 120s to 180s (3 minutes) to account for production delays
 
     return () => {
       cancelled = true

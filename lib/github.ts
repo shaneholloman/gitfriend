@@ -60,7 +60,27 @@ export async function scanRepository(params: {
   const octokit = createOctokit()
 
   // Repo metadata
-  const { data: repoData } = await octokit.repos.get({ owner, repo })
+  let repoData
+  try {
+    const response = await octokit.repos.get({ owner, repo })
+    repoData = response.data
+  } catch (error: any) {
+    if (error?.status === 401) {
+      throw new Error(`GitHub API authentication failed. Please check your GITHUB_ACCESS_TOKEN environment variable.`)
+    }
+    if (error?.status === 404) {
+      throw new Error(`Repository "${owner}/${repo}" not found. Please check that the repository exists and is accessible.`)
+    }
+    if (error?.status === 403) {
+      // Check if it's a rate limit or access issue
+      const message = error?.message || ""
+      if (message.includes("rate limit") || message.includes("API rate limit")) {
+        throw new Error(`GitHub API rate limit exceeded. Please wait a few minutes and try again.`)
+      }
+      throw new Error(`Access denied to repository "${owner}/${repo}". The repository may be private or you may not have permission to access it.`)
+    }
+    throw new Error(`Failed to fetch repository "${owner}/${repo}": ${error?.message || "Unknown error"}`)
+  }
   const defaultBranch = repoData.default_branch || "main"
 
   // Languages
@@ -125,16 +145,24 @@ export async function scanRepository(params: {
 
   const sorted = filtered.sort((a, b) => priority(a.path) - priority(b.path)).slice(0, maxFiles)
 
-  // Concurrency-limited content fetching
-  const concurrency = 6
+  // Concurrency-limited content fetching with timeout protection
+  const concurrency = 4 // Reduced concurrency for stability
   let idx = 0
   const results: ScannedFile[] = []
+  const REQUEST_TIMEOUT = 10000 // 10 seconds per file request
 
   async function worker() {
     while (idx < sorted.length) {
       const cur = sorted[idx++]
       try {
-        const { data } = await octokit.repos.getContent({ owner, repo, path: cur.path })
+        // Add timeout to individual file requests
+        const fileRequest = octokit.repos.getContent({ owner, repo, path: cur.path })
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("Request timeout")), REQUEST_TIMEOUT)
+        })
+        
+        const { data } = await Promise.race([fileRequest, timeoutPromise])
+        
         if (Array.isArray(data)) {
           // Shouldn't happen (we filtered blobs), but guard it
           results.push({ path: cur.path, size: cur.size, type: "dir" })
@@ -149,7 +177,7 @@ export async function scanRepository(params: {
           results.push({ path: cur.path, size: cur.size, type: "file" })
         }
       } catch (err) {
-        // Non-fatal: skip paths we cannot read
+        // Non-fatal: skip paths we cannot read or that timeout
         results.push({ path: cur.path, size: cur.size, type: "file" })
       }
     }

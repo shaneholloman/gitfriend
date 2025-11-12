@@ -3,6 +3,7 @@ import { Groq } from "groq-sdk"
 import { type NextRequest, NextResponse } from "next/server"
 import { redis, CACHE_KEYS, CACHE_TTL, type ReadmeGenerationStatus } from "@/lib/redis"
 import { scanRepository, type ScannedFile, type RepoAnalysis } from "@/lib/github"
+import { withTimeout } from "@/lib/timeout-utils"
 
 // Define types and functions inline to avoid import issues
 type ProjectKind = "web" | "python" | "java" | "native" | "unknown"
@@ -60,7 +61,7 @@ function shouldIncludeByKind(kind: ProjectKind, path: string): boolean {
   }
 }
 
-function selectRelevantFiles(kind: ProjectKind, files: ScannedFile[], maxFiles = 220) {
+function selectRelevantFiles(kind: ProjectKind, files: ScannedFile[], maxFiles = 50) {
   const filtered = files.filter((f) => {
     const p = f.path
     if (UNIVERSAL_IGNORES.test(p)) return false
@@ -90,9 +91,11 @@ Languages: ${Object.keys(analysis.languages).join(", ") || "Unknown"}
 Default Branch: ${analysis.defaultBranch}
 Stars: ${analysis.repoMeta.stars}  Forks: ${analysis.repoMeta.forks}  Issues: ${analysis.repoMeta.openIssues}`
 
-  const parts = files.map((f) => {
+  // Limit file content to prevent context from being too large
+  const parts = files.slice(0, 40).map((f) => {
     const header = `\n---\nFile: ${f.path}\n`
-    return header + (f.content ? f.content : "")
+    const content = f.content ? f.content.slice(0, 1200) : "" // Further limit per-file content
+    return header + content
   })
   return `${meta}\n\nKey Files:\n${parts.join("")}`
 }
@@ -295,6 +298,7 @@ export async function GET(req: NextRequest) {
 
     // Check the status of generation
     const status = await redis.get<ReadmeGenerationStatus>(CACHE_KEYS.README_STATUS(repoUrl))
+    const error = await redis.get<string>(CACHE_KEYS.README_ERROR(repoUrl))
 
     const rateLimitKey = CACHE_KEYS.README_RATE_LIMIT(repoUrl)
     const now = Date.now()
@@ -305,6 +309,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         status: status || "not_started",
         rateLimited: true,
+        error: error || undefined,
       })
     }
 
@@ -312,6 +317,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       status: status || "not_started",
+      error: error || undefined,
     })
   } catch (error: any) {
     console.error("Error checking README status:", error)
@@ -366,8 +372,9 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Set status to pending
+    // Set status to pending and clear any previous error
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "pending", { ex: CACHE_TTL.STATUS })
+    await redis.del(CACHE_KEYS.README_ERROR(repoUrl))
 
     // Start the generation process in the background
     console.info(`[README] Starting background generation for ${repoUrl}`)
@@ -387,8 +394,10 @@ export async function POST(req: NextRequest) {
 
 // Background process to generate README
 async function generateReadmeInBackground(repoUrl: string, customInstructions?: string) {
+  const startTime = Date.now()
   try {
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "processing", { ex: CACHE_TTL.STATUS })
+    console.info(`[README] Starting generation for ${repoUrl}`)
 
     const match = repoUrl.match(/github\.com\/(.+?)\/(.+?)(?:\.git)?(?:\/)?$/)
     if (!match) {
@@ -396,39 +405,49 @@ async function generateReadmeInBackground(repoUrl: string, customInstructions?: 
     }
     const [, owner, repo] = match
 
-    // Full repo analysis (already avoids huge/binary files)
+    // Full repo analysis (optimized for speed)
+    console.info(`[README] Scanning repository ${owner}/${repo}...`)
     const analysis = await scanRepository({
       owner,
       repo,
-      maxFiles: 100, // Reduced to avoid rate limits
-      maxFileSizeBytes: 128_000, // Reduced
-      perFileCharLimit: 2000, // Reduced
+      maxFiles: 50, // Further reduced for faster processing
+      maxFileSizeBytes: 100_000, // Reduced
+      perFileCharLimit: 1500, // Reduced for faster processing
     })
+    console.info(`[README] Repository scan completed in ${Date.now() - startTime}ms`)
 
     const kind = detectProjectKind(analysis)
-    const relevant = selectRelevantFiles(kind, analysis.files, 100)
+    const relevant = selectRelevantFiles(kind, analysis.files, 50) // Reduced from 100
     const contextRaw = buildContextBlock(analysis, relevant)
-    const compressedContext = await summarizeIfNeeded(groq, contextRaw, 8000) // Reduced threshold
+    const compressedContext = await summarizeIfNeeded(groq, contextRaw, 6000) // Reduced threshold for faster processing
     const techStackHint = deriveTechStackHint(relevant)
+    console.info(`[README] Context prepared (${compressedContext.length} chars), calling Groq API...`)
 
     const systemPrompt = buildReadmeSystemPrompt(compressedContext, techStackHint, customInstructions)
 
-    // Add retry logic for rate limiting
+    // Add retry logic with timeout for rate limiting
     let completion
     let retries = 3
+    const groqStartTime = Date.now()
     while (retries > 0) {
       try {
-        completion = await groq.chat.completions.create({
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: "Generate the README.md now. Begin with name, description, and tech stack." },
-          ],
-          model: "openai/gpt-oss-120b",
-          temperature: 0.7,
-          max_completion_tokens: 3000, // Further reduced
-          top_p: 1,
-          stream: false,
-        })
+        // Wrap Groq API call with 60 second timeout to prevent hanging
+        completion = await withTimeout(
+          groq.chat.completions.create({
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: "Generate the README.md now. Begin with name, description, and tech stack." },
+            ],
+            model: "openai/gpt-oss-120b",
+            temperature: 0.7,
+            max_completion_tokens: 2000, // Reduced for faster generation
+            top_p: 1,
+            stream: false,
+          }),
+          60000, // 60 second timeout
+          "Groq API call timed out after 60 seconds"
+        )
+        console.info(`[README] Groq API call completed in ${Date.now() - groqStartTime}ms`)
         break // Success, exit retry loop
       } catch (error: any) {
         if (error?.status === 429 && retries > 1) {
@@ -437,8 +456,12 @@ async function generateReadmeInBackground(repoUrl: string, customInstructions?: 
           console.warn(`[README] Rate limited, waiting ${waitTime}ms before retry ${4 - retries}/3`)
           await new Promise(resolve => setTimeout(resolve, waitTime))
           retries--
+        } else if (error?.message?.includes("timed out") && retries > 1) {
+          // Timeout error, retry once
+          console.warn(`[README] API call timed out after ${Date.now() - groqStartTime}ms, retrying... (${4 - retries}/3)`)
+          retries--
         } else {
-          throw error // Re-throw if not rate limit or no retries left
+          throw error // Re-throw if not rate limit/timeout or no retries left
         }
       }
     }
@@ -454,11 +477,14 @@ async function generateReadmeInBackground(repoUrl: string, customInstructions?: 
 
     await redis.set(CACHE_KEYS.README_GENERATION(repoUrl), generatedReadme, { ex: CACHE_TTL.README })
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "completed", { ex: CACHE_TTL.STATUS })
-    console.info(`[README] Completed background generation for ${repoUrl}`)
+    const totalTime = Date.now() - startTime
+    console.info(`[README] Completed background generation for ${repoUrl} in ${totalTime}ms`)
     return generatedReadme
   } catch (error) {
     console.error("[v0] Error generating README:", error)
+    const errorMessage = error instanceof Error ? error.message : "Failed to generate README"
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "failed", { ex: CACHE_TTL.STATUS })
+    await redis.set(CACHE_KEYS.README_ERROR(repoUrl), errorMessage, { ex: CACHE_TTL.STATUS })
     throw error
   } finally {
     await releaseReadmeLock(repoUrl)

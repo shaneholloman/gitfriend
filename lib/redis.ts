@@ -154,6 +154,7 @@ export type ReadmeGenerationStatus = "pending" | "processing" | "completed" | "f
 export const CACHE_KEYS = {
   README_GENERATION: (repoUrl: string) => `readme:${repoUrl}`,
   README_STATUS: (repoUrl: string) => `readme:status:${repoUrl}`,
+  README_ERROR: (repoUrl: string) => `readme:error:${repoUrl}`,
   README_LOCK: (repoUrl: string) => `readme:lock:${repoUrl}`,
   README_RATE_LIMIT: (repoUrl: string) => `readme:rate:${repoUrl}`,
 }
