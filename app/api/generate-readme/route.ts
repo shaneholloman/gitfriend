@@ -137,52 +137,55 @@ function deriveTechStackHint(files: ScannedFile[]): string {
 }
 
 function buildReadmeSystemPrompt(compressedContext: string, techStackHint: string, customInstructions?: string) {
-  const referenceImage =
-    "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-qGkDkby5jwbfb9ePVutsxIxV2FemcR.png"
-
   return `
-You are GitFriend's README author powered by Groq. Produce a polished, publication-ready README.md with excellent Markdown rendering and clear hierarchy.
+You are GitFriend's README author powered by Groq. Produce a minimal, professional, and publication-ready README.md with clear Markdown hierarchy and spacing.
 
-Output requirements (strict):
-- Start with: 
+Output structure (strict):
+- Start with:
   # <Project Name>
-  <One-sentence tagline/description>
-  Tech Stack
-- Follow with these sections in order, using Markdown headings (##) and consistent spacing:
-  Introduction
-  Tech Stack (bulleted list with links where obvious)
-  How It's Built (Architecture / Key Modules)
-  Requirements / Prerequisites
-  Installation
-  Configuration (environment variables, including .env.example if present)
-  Usage (commands, examples)
-  Project Structure (short tree or bullets of core files)
-  Features
-  Deployment (if applicable)
-  Contributing
-  License
-  FAQ (optional, short)
+  <One-line tagline>
+  _Building 21st century open-source infrastructure_
+  [Learn more »](#introduction)
+- Below that, a "Quick Links" line using internal anchors (Introduction · Tech Stack · Contributing · Discord)
 
-Formatting & style (inspired by the reference image at ${referenceImage}):
-- Prominent H1 title and a concise tagline.
-- Add an inline "Quick Links" line below the tagline using internal anchors: Introduction · Tech Stack · Usage · Contributing (only include links to sections that exist).
-- Use clean Markdown, no HTML unless absolutely necessary.
-- Prefer short paragraphs, bullet lists, and fenced code blocks for commands.
-- Never include triple-backticks around the entire README; output just the markdown body.
+Then follow with sections in this exact order:
+## Introduction
+## Tech Stack
+## How It's Built
+## Requirements / Prerequisites
+## Installation
+## Configuration
+## Usage
+## Project Structure
+## Features
+## Deployment (if applicable)
+## Contributing
+## License
+## FAQ (optional)
+
+Formatting rules:
+- Use simple Markdown. No HTML, no custom CSS.
+- Center title and tagline visually through spacing (not HTML).
+- Prefer concise descriptions and consistent spacing between sections.
+- Use bullet lists for items, fenced code blocks for commands.
+- Never include triple-backticks around the entire README output.
+- No images, badges, or external decorative assets.
 
 Authoring rules:
-- Never fabricate specifics. Use best-effort synthesis from the provided context.
-- If information is missing, state reasonable placeholders (e.g., "TBD") sparingly.
-- Merge and improve any existing README content without duplication.
-- Keep language straightforward and developer-friendly.
+- Do not fabricate details; derive only from context.
+- Merge any existing README data but avoid repetition.
+- Keep tone neutral, technical, and developer-facing.
+- Focus on clarity and minimalism.
 
 Context (compressed):
 ${compressedContext}
 
 Tech Stack Hint (best-effort): ${techStackHint}
 
-${customInstructions ? `User Notes: ${customInstructions}` : ""}`
+${customInstructions ? `User Notes: ${customInstructions}` : ""}
+`
 }
+
 
 // Initialize Groq (singleton ok in route scope)
 const groq = new Groq({
