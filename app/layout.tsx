@@ -1,13 +1,13 @@
-import type React from "react"
+import type { ReactNode } from "react"
 import "@/app/globals.css"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/auth-context"
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 import { Toaster } from "@/components/ui/toaster"
 import { Suspense } from "react"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"], display: "swap" })
 
 export const metadata = {
   title: "Git Friend - Make Git Simple Again",
@@ -15,17 +15,18 @@ export const metadata = {
     "Git Friend simplifies complex Git workflows, making version control intuitive and collaborative for developers of all skill levels.",
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <AuthProvider>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            <Suspense>{children}</Suspense>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Suspense fallback={null}>{children}</Suspense>
             <Toaster />
           </ThemeProvider>
         </AuthProvider>

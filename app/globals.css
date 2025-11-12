@@ -35,11 +35,6 @@
     --readme-text: 240 10% 4%;
     --readme-text-muted: 240 5% 50%;
     --readme-overlay-bg: 255 100% 99% / 0.9;
-
-    /* Sidebar news component variables */
-    --offset: 10px;
-    --slide-up-fade: slide-up-fade 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    --fade-in: fade-in 0.2s ease-in-out forwards;
   }
 
   .dark {
@@ -73,11 +68,6 @@
     --readme-text: 0 0% 98%;
     --readme-text-muted: 240 5% 75%;
     --readme-overlay-bg: 250 30% 8% / 0.9;
-
-    /* Sidebar news component variables - dark mode */
-    --offset: 10px;
-    --slide-up-fade: slide-up-fade 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    --fade-in: fade-in 0.2s ease-in-out forwards;
   }
 }
 
@@ -192,42 +182,7 @@
   }
 }
 
-/* Add this to your globals.css file */
-
-/* Mesh gradient for dark suggestion cards */
-.bg-mesh-gradient {
-  background-image: radial-gradient(at 100% 0%, hsla(300, 100%, 50%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, hsla(280, 100%, 60%, 0.3) 0px, transparent 50%);
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-/* Dark suggestion card specific styles */
-.dark-suggestion-card {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.3s ease;
-}
-
-.dark-suggestion-card:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.dark-suggestion-card::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  background: linear-gradient(to top, rgba(18, 18, 18, 0.4), transparent);
-  z-index: 1;
-  pointer-events: none;
-}
-
-/* Add these theme-aware styles for suggestion cards */
+/* Theme-aware styles for suggestion cards */
 
 /* Theme-aware suggestion card */
 .theme-suggestion-card {
@@ -1042,45 +997,6 @@ html {
   perspective: 1000px;
 }
 
-/* Mesh gradient animations for news cards */
-.mesh-gradient {
-  position: relative;
-  overflow: hidden;
-}
-
-.mesh-gradient::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-  animation: mesh-float 6s ease-in-out infinite;
-}
-
-.mesh-gradient::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 50%);
-  transform: translate(-50%, -50%);
-  animation: mesh-rotate 8s linear infinite;
-}
-
-@keyframes mesh-float {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  33% { transform: translate(30px, -30px) rotate(120deg); }
-  66% { transform: translate(-20px, 20px) rotate(240deg); }
-}
-
-@keyframes mesh-rotate {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
-}
 
 @keyframes fadeInOut {
   0%, 100% { 

@@ -154,21 +154,7 @@ export default function LandingPage() {
       pattern: "orbit",
       link: "/git-mojis",
     },
-    {
-      id: 5,
-      title: "Open Source Finder",
-      description:
-        "Discover amazing open source repositories with advanced filtering by language, stars, tags, and more. Find the perfect project for your next contribution.",
-      icon: <GitGraph className="w-8 h-8" />,
-      color: "from-teal-500 to-emerald-600",
-      lightColor: "from-teal-400 to-emerald-500",
-      bgLight: "bg-gradient-to-br from-teal-50 to-emerald-50",
-      bgDark: "bg-gradient-to-br from-teal-900/20 to-emerald-900/20",
-      nodeIcon: <GitCommit className="w-3 h-3" />,
-      secondaryIcon: <FileCode className="w-3 h-3" />,
-      pattern: "circular",
-      link: "/opensource",
-    },
+    
   ]
 
   // Add state for controlling animation sequence
