@@ -328,7 +328,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // Accept 'force' to bypass cache and always regenerate
-    const { repoUrl, customInstructions, force } = await req.json()
+    const { repoUrl, customInstructions, force, stream: useStream } = await req.json()
 
     if (!repoUrl) {
       return NextResponse.json({ error: "Repository URL is required" }, { status: 400 })
@@ -373,10 +373,84 @@ export async function POST(req: NextRequest) {
     }
 
     // Set status to pending and clear any previous error
-    await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "pending", { ex: CACHE_TTL.STATUS })
+    await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "processing", { ex: CACHE_TTL.STATUS })
     await redis.del(CACHE_KEYS.README_ERROR(repoUrl))
 
-    // Start the generation process in the background
+    // If streaming is requested, return a streaming response
+    if (useStream) {
+      return new Response(
+        new ReadableStream({
+          async start(controller) {
+            const encoder = new TextEncoder()
+            try {
+              const [, owner, repo] = match
+              
+              // Scan repository
+              const analysis = await scanRepository({
+                owner,
+                repo,
+                maxFiles: 50,
+                maxFileSizeBytes: 100_000,
+                perFileCharLimit: 1500,
+              })
+
+              const kind = detectProjectKind(analysis)
+              const relevant = selectRelevantFiles(kind, analysis.files, 50)
+              const contextRaw = buildContextBlock(analysis, relevant)
+              const compressedContext = await summarizeIfNeeded(groq, contextRaw, 6000)
+              const techStackHint = deriveTechStackHint(relevant)
+              const systemPrompt = buildReadmeSystemPrompt(compressedContext, techStackHint, customInstructions)
+
+              // Stream the Groq response
+              const completion = await groq.chat.completions.create({
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: "Generate the README.md now. Begin with name, description, and tech stack." },
+                ],
+                model: "openai/gpt-oss-120b",
+                temperature: 0.7,
+                max_completion_tokens: 2000,
+                top_p: 1,
+                stream: true,
+              })
+
+              let fullReadme = ""
+              for await (const chunk of completion) {
+                const content = chunk.choices?.[0]?.delta?.content || ""
+                if (content) {
+                  fullReadme += content
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`))
+                }
+              }
+
+              // Save to cache
+              await redis.set(CACHE_KEYS.README_GENERATION(repoUrl), fullReadme, { ex: CACHE_TTL.README })
+              await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "completed", { ex: CACHE_TTL.STATUS })
+              
+              controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
+              controller.close()
+            } catch (error: any) {
+              const errorMessage = error instanceof Error ? error.message : "Failed to generate README"
+              await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "failed", { ex: CACHE_TTL.STATUS })
+              await redis.set(CACHE_KEYS.README_ERROR(repoUrl), errorMessage, { ex: CACHE_TTL.STATUS })
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`))
+              controller.close()
+            } finally {
+              await releaseReadmeLock(repoUrl)
+            }
+          },
+        }),
+        {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache, no-transform",
+            Connection: "keep-alive",
+          },
+        }
+      )
+    }
+
+    // Start the generation process in the background (non-streaming)
     console.info(`[README] Starting background generation for ${repoUrl}`)
     generateReadmeInBackground(repoUrl, customInstructions).catch((error) => {
       console.error(`[README] Background generation failed for ${repoUrl}`, error)
@@ -442,7 +516,7 @@ async function generateReadmeInBackground(repoUrl: string, customInstructions?: 
             temperature: 0.7,
             max_completion_tokens: 2000, // Reduced for faster generation
             top_p: 1,
-            stream: false,
+            stream: false, // Non-streaming for background
           }),
           60000, // 60 second timeout
           "Groq API call timed out after 60 seconds"

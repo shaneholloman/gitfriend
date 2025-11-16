@@ -5,7 +5,7 @@ import { UserAuthButton } from "@/components/auth/user-auth-button"
 import MarkdownPreview from "@/components/readme/markdown-preview"
 
 import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
@@ -21,47 +21,17 @@ import {
   Zap,
   Github,
   Code,
-  CheckCircle2,
-  Lightbulb,
-  X,
   AlertCircle,
   Download,
 } from "lucide-react"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { motion, AnimatePresence } from "framer-motion"
-import { TextShimmerWave } from "@/components/core/text-shimmer-wave"
+import { motion } from "framer-motion"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useAuth } from "@/context/auth-context"
 
 export default function GenerateReadme() {
-  // Array of README tips
-  const readmeTips = [
-    "GitHub's most starred README contains only emojis! 🌟",
-    "Adding screenshots to your README can increase project adoption by up to 30%.",
-    "A good README should answer: what, why, and how.",
-    "Including a 'Quick Start' section helps new users get up and running faster.",
-    "Badges in your README provide quick visual indicators of project status.",
-    "Keep your installation instructions up-to-date to reduce onboarding friction.",
-    "A table of contents helps users navigate longer READMEs.",
-    "Including a contributing guide encourages community participation.",
-    "Explain the problem your project solves in the first paragraph.",
-    "Use code examples to show how your project works.",
-  ]
-
-  // Array of README facts for the shimmer animation
-  const readmeFacts = [
-    "Creating the perfect README...",
-    "Analyzing your repository...",
-    "Crafting documentation...",
-    "Generating content...",
-    "Building your project story...",
-    "Structuring documentation...",
-    "Extracting key features...",
-    "Organizing installation steps...",
-  ]
-
   // Example repositories
   const exampleRepos = [
     { name: "React", owner: "facebook/react", icon: <Code className="h-5 w-5" /> },
@@ -84,12 +54,6 @@ export default function GenerateReadme() {
     updated_at?: string
   } | null>(null)
   const { theme, setTheme } = useTheme()
-  const [currentStep, setCurrentStep] = useState(0)
-  const [progress, setProgress] = useState(0)
-  const [currentTipIndex, setCurrentTipIndex] = useState(0)
-  const [currentFactIndex, setCurrentFactIndex] = useState(0)
-  const [showOverlay, setShowOverlay] = useState(false)
-  const overlayRef = useRef<HTMLDivElement>(null)
   const [customRequirements, setCustomRequirements] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [hoverState, setHoverState] = useState({
@@ -99,8 +63,6 @@ export default function GenerateReadme() {
   })
   const { isGuest, guestTimeLeft, guestLogout } = useAuth()
   const [showGuestExpired, setShowGuestExpired] = useState(false)
-  const pollIntervalRef = useRef<number | null>(null)
-  const pollTimeoutRef = useRef<number | null>(null)
 
   // Show modal and block actions when guest session expires
   useEffect(() => {
@@ -110,76 +72,7 @@ export default function GenerateReadme() {
     }
   }, [isGuest, guestTimeLeft, guestLogout])
 
-  useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current)
-        pollIntervalRef.current = null
-      }
-      if (pollTimeoutRef.current) {
-        clearTimeout(pollTimeoutRef.current)
-        pollTimeoutRef.current = null
-      }
-    }
-  }, [])
 
-  // Steps in the generation process
-  const steps = [
-    { name: "Fetching Repository", description: "Connecting to GitHub and retrieving repository data" },
-    { name: "Analyzing Code Structure", description: "Examining files, folders, and dependencies" },
-    { name: "Understanding Project", description: "Identifying frameworks, libraries, and project purpose" },
-    { name: "Formatting Content", description: "Creating a well-structured README with all necessary sections" },
-  ]
-
-  // Rotate through tips during generation
-  useEffect(() => {
-    if (isGenerating) {
-      const tipInterval = setInterval(() => {
-        setCurrentTipIndex((prev) => (prev + 1) % readmeTips.length)
-      }, 5000)
-
-      const factInterval = setInterval(() => {
-        setCurrentFactIndex((prev) => (prev + 1) % readmeFacts.length)
-      }, 3000)
-
-      return () => {
-        clearInterval(tipInterval)
-        clearInterval(factInterval)
-      }
-    }
-  }, [isGenerating])
-
-  // Handle escape key to close overlay
-  useEffect(() => {
-    const handleEscKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && showOverlay) {
-        setShowOverlay(false)
-        if (isGenerating) {
-          setIsGenerating(false)
-        }
-      }
-    }
-
-    window.addEventListener("keydown", handleEscKey)
-    return () => window.removeEventListener("keydown", handleEscKey)
-  }, [showOverlay, isGenerating])
-
-  // Handle click outside overlay content to close
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (overlayRef.current && e.target === overlayRef.current) {
-        setShowOverlay(false)
-        if (isGenerating) {
-          setIsGenerating(false)
-        }
-      }
-    }
-
-    if (showOverlay) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [showOverlay, isGenerating])
 
   const validateRepoUrl = (url: string) => {
     // Simple validation for GitHub repository URL
@@ -205,11 +98,8 @@ export default function GenerateReadme() {
 
     setError(null)
     setIsGenerating(true)
-    setShowOverlay(true)
-    setCurrentStep(0)
-    setProgress(0)
-    setRepoData(null)
     setGeneratedReadme("")
+    setRepoData(null)
 
     try {
       // Extract owner and repo name from URL
@@ -220,15 +110,15 @@ export default function GenerateReadme() {
       // Set initial repo data
       setRepoData({
         name: repo,
-        description: "Fetching repository description...",
-        language: "Analyzing...",
+        description: "Analyzing repository...",
+        language: "Loading...",
         stars: 0,
         forks: 0,
         owner: owner,
       })
 
-      // Start the README generation process
-      const startResponse = await fetch("/api/generate-readme", {
+      // Start streaming README generation
+      const response = await fetch("/api/generate-readme", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -237,122 +127,62 @@ export default function GenerateReadme() {
           repoUrl,
           customInstructions: customRequirements || undefined,
           force,
+          stream: true, // Request streaming
         }),
       })
 
-      if (!startResponse.ok) {
-        const errorData = await startResponse.json()
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Failed to start README generation" }))
         throw new Error(errorData.error || "Failed to start README generation")
       }
 
-      const startData = await startResponse.json()
+      // Handle streaming response
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
 
-      // If README was already cached, show it immediately
-      if (startData.status === "completed" && startData.readme) {
-        setGeneratedReadme(startData.readme)
-        setProgress(100)
-        setTimeout(() => {
-          setShowOverlay(false)
-          setIsGenerating(false)
-        }, 1500)
-        return
+      if (!reader) {
+        throw new Error("Failed to get response stream")
       }
 
-      const clearPollingTimers = () => {
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current)
-          pollIntervalRef.current = null
-        }
-        if (pollTimeoutRef.current) {
-          clearTimeout(pollTimeoutRef.current)
-          pollTimeoutRef.current = null
-        }
-      }
+      let buffer = ""
+      let readmeContent = ""
 
-      clearPollingTimers()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
 
-      const pollStatus = async () => {
-        try {
-          const statusResponse = await fetch(`/api/generate-readme?repoUrl=${encodeURIComponent(repoUrl)}`)
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n\n")
+        buffer = lines.pop() || ""
 
-          if (!statusResponse.ok) {
-            throw new Error("Failed to check README generation status")
-          }
-
-          const statusData = await statusResponse.json()
-
-          if (statusData.status === "completed" && statusData.readme) {
-            clearPollingTimers()
-            setGeneratedReadme(statusData.readme)
-            setProgress(100)
-
-            setTimeout(() => {
-              setShowOverlay(false)
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6)
+            if (data === "[DONE]") {
               setIsGenerating(false)
-            }, 1500)
-          } else if (statusData.status === "failed") {
-            clearPollingTimers()
-            setError("README generation failed. This might be due to rate limiting or API issues. Please try again in a few minutes.")
-            setIsGenerating(false)
-            setShowOverlay(false)
+              break
+            }
+            try {
+              const parsed = JSON.parse(data)
+              if (parsed.error) {
+                throw new Error(parsed.error)
+              }
+              if (parsed.content) {
+                readmeContent += parsed.content
+                setGeneratedReadme(readmeContent)
+              }
+            } catch (e) {
+              // Ignore JSON parse errors for incomplete chunks
+            }
           }
-          // Continue polling for pending or processing status
-        } catch (error) {
-          clearPollingTimers()
-          console.error("Error checking README status:", error)
-          setError(error instanceof Error ? error.message : "Failed to generate README")
-          setIsGenerating(false)
-          setShowOverlay(false)
         }
       }
 
-      await pollStatus()
-
-      // Move to step 1 - Analyzing Code Structure
-      setTimeout(() => {
-        setCurrentStep(1)
-        setProgress(25)
-      }, 2000)
-
-      // Move to step 2 - Understanding Project
-      setTimeout(() => {
-        setCurrentStep(2)
-        setProgress(50)
-      }, 4000)
-
-      // Move to step 3 - Formatting Content
-      setTimeout(() => {
-        setCurrentStep(3)
-        setProgress(75)
-      }, 6000)
-
-      // Poll for README generation status every 8 seconds
-      pollIntervalRef.current = window.setInterval(() => {
-        void pollStatus()
-      }, 8000)
-
-      // Set a timeout to stop polling after 2 minutes
-      pollTimeoutRef.current = window.setTimeout(() => {
-        clearPollingTimers()
-        if (isGenerating) {
-          setError("README generation is taking longer than expected. Please try again later.")
-          setIsGenerating(false)
-          setShowOverlay(false)
-        }
-      }, 120000) // 2 minutes
+      setIsGenerating(false)
     } catch (error) {
       console.error("Error generating README:", error)
       setError(error instanceof Error ? error.message : "Failed to generate README")
       setIsGenerating(false)
-      setShowOverlay(false)
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current)
-        pollIntervalRef.current = null
-      }
-      if (pollTimeoutRef.current) {
-        clearTimeout(pollTimeoutRef.current)
-        pollTimeoutRef.current = null
-      }
     }
   }
 
@@ -534,7 +364,13 @@ export default function GenerateReadme() {
                       className="w-full h-12 bg-[hsl(var(--readme-card-bg))] border border-[hsl(var(--readme-border))] rounded-md px-10 py-2 text-[hsl(var(--readme-text))] placeholder:text-[hsl(var(--readme-text-muted))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--readme-primary))] relative"
                       placeholder="https://github.com/username/repository"
                       value={repoUrl}
-                      onChange={(e) => setRepoUrl(e.target.value)}
+                      onChange={(e) => {
+                        setRepoUrl(e.target.value)
+                        // Auto-start generation when valid URL is pasted
+                        if (validateRepoUrl(e.target.value) && !isGenerating && !generatedReadme) {
+                          setTimeout(() => fetchRepoData(false), 500) // Small delay to allow paste to complete
+                        }
+                      }}
                       onKeyDown={handleKeyDown}
                     />
                   </div>
@@ -549,8 +385,21 @@ export default function GenerateReadme() {
                       onMouseEnter={() => setHoverState((prev) => ({ ...prev, button: true }))}
                       onMouseLeave={() => setHoverState((prev) => ({ ...prev, button: false }))}
                     >
-                      <Zap className="h-4 w-4" />
-                      Generate README
+                      {isGenerating ? (
+                        <>
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="h-4 w-4 border-2 border-current border-t-transparent rounded-full"
+                          />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="h-4 w-4" />
+                          Generate README
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -703,145 +552,31 @@ export default function GenerateReadme() {
             )}
           </div>
 
-          {/* Overlay for generation process */}
-          <AnimatePresence>
-            {showOverlay && (
-              <motion.div
-                ref={overlayRef}
-                className="fixed inset-0 bg-[hsl(var(--readme-overlay-bg))] backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <motion.div
-                  className="bg-[hsl(var(--readme-card-bg))] border-2 border-[hsl(var(--readme-border))] rounded-xl shadow-xl max-w-2xl w-full p-8 relative"
-                  initial={{ scale: 0.9, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.9, y: 20 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                >
-                  <button
-                    onClick={() => {
-                      setShowOverlay(false)
-                      setIsGenerating(false)
-                    }}
-                    className="absolute top-4 right-4 text-[hsl(var(--readme-text-muted))] hover:text-[hsl(var(--readme-text))] transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-
-                  <div className="flex justify-center mb-6">
-                    <div className="h-16 w-16 rounded-full bg-[hsl(var(--readme-primary))/20] flex items-center justify-center">
-                      <motion.div
-                        animate={{
-                          rotate: 360,
-                          transition: { duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" },
-                        }}
-                      >
-                        <Sparkles className="h-8 w-8 text-[hsl(var(--readme-primary))]" />
-                      </motion.div>
-                    </div>
+          {/* Show streaming README as it's being generated */}
+          {isGenerating && !generatedReadme && (
+            <motion.div
+              className="max-w-5xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="border-[hsl(var(--readme-border))] bg-[hsl(var(--readme-card-bg))] shadow-lg">
+                <CardContent className="p-8">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="h-6 w-6 border-2 border-[hsl(var(--readme-primary))] border-t-transparent rounded-full"
+                    />
+                    <span className="text-lg font-medium">Generating README...</span>
                   </div>
-
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold mb-2">Creating Your README</h2>
-                    <div className="h-8 overflow-hidden">
-                      <TextShimmerWave
-                        className="[--base-color:hsl(var(--readme-text))] [--base-gradient-color:hsl(var(--readme-primary))]"
-                        duration={1}
-                        spread={1}
-                        zDistance={1}
-                        scaleDistance={1.1}
-                        rotateYDistance={20}
-                      >
-                        {readmeFacts[currentFactIndex]}
-                      </TextShimmerWave>
-                    </div>
-                  </div>
-
-                  {/* Random tip */}
-                  <div className="mb-8 text-center">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={currentTipIndex}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3 }}
-                        className="flex items-center justify-center gap-2"
-                      >
-                        <Lightbulb className="h-4 w-4 text-[hsl(var(--readme-primary))]" />
-                        <span className="text-sm text-[hsl(var(--readme-text-muted))]">
-                          {readmeTips[currentTipIndex]}
-                        </span>
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="mb-8">
-                    <div className="h-2 w-full bg-[hsl(var(--readme-border))] rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full bg-[hsl(var(--readme-primary))]"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.5 }}
-                      />
-                    </div>
-                    <div className="flex justify-between mt-2 text-xs text-[hsl(var(--readme-text-muted))]">
-                      <span>{steps[currentStep]?.name || "Analyzing"}</span>
-                      <span>{progress}% Complete</span>
-                    </div>
-                  </div>
-
-                  {/* Steps */}
-                  <div className="space-y-4">
-                    {steps.map((step, index) => (
-                      <div
-                        key={index}
-                        className={`flex items-start gap-3 p-3 rounded-md transition-all duration-300 ${
-                          index === currentStep
-                            ? "bg-[hsl(var(--readme-primary))/10 border border-[hsl(var(--readme-primary))/30]"
-                            : index < currentStep
-                              ? "opacity-60"
-                              : "opacity-40"
-                        }`}
-                      >
-                        <div
-                          className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors ${
-                            index < currentStep
-                              ? "bg-[hsl(var(--readme-primary))] text-black"
-                              : index === currentStep
-                                ? "bg-[hsl(var(--readme-primary))/20] text-[hsl(var(--readme-primary))]"
-                                : "bg-[hsl(var(--readme-border))] text-[hsl(var(--readme-text-muted))]"
-                          }`}
-                        >
-                          {index < currentStep ? (
-                            <CheckCircle2 className="h-3 w-3" />
-                          ) : (
-                            <span className="text-xs">{index + 1}</span>
-                          )}
-                        </div>
-                        <div>
-                          <div
-                            className={`font-medium ${
-                              index <= currentStep
-                                ? "text-[hsl(var(--readme-text))]"
-                                : "text-[hsl(var(--readme-text-muted))]"
-                            }`}
-                          >
-                            {step.name}
-                          </div>
-                          <div className="text-xs text-[hsl(var(--readme-text-muted))]">{step.description}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <p className="text-center text-[hsl(var(--readme-text-muted))] text-sm">
+                    Analyzing your repository and creating documentation
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
         </main>
       </div>
       {/* Guest session expired modal */}
