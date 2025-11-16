@@ -139,53 +139,365 @@ function deriveTechStackHint(files: ScannedFile[]): string {
   return uniq.length ? uniq.join(", ") : "See Languages and dependencies"
 }
 
+/**
+ * Normalize Markdown for perfect GitHub rendering
+ * Only fixes rendering issues without altering content or structure
+ */
+function normalizeMarkdown(markdown: string): string {
+  let normalized = markdown.trim()
+
+  // Remove any triple-backticks wrapping the entire document
+  normalized = normalized.replace(/^```[a-z]*\n?([\s\S]*?)\n?```$/m, "$1")
+
+  // Remove HTML tags that should be Markdown (but preserve content)
+  normalized = normalized
+    .replace(/<p>(.*?)<\/p>/gi, "$1\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<b>(.*?)<\/b>/gi, "**$1**")
+    .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
+    .replace(/<i>(.*?)<\/i>/gi, "*$1*")
+    .replace(/<em>(.*?)<\/em>/gi, "*$1*")
+    .replace(/<code>(.*?)<\/code>/gi, "`$1`")
+    .replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, "```\n$1\n```")
+
+  // Normalize line endings
+  normalized = normalized.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+
+  // Remove invisible characters that break rendering
+  normalized = normalized.replace(/[\u200B-\u200D\uFEFF]/g, "")
+
+  // Fix excessive blank lines (max 2 consecutive)
+  normalized = normalized.replace(/\n{4,}/g, "\n\n\n")
+
+  // Ensure blank line before headings (but not at start)
+  normalized = normalized.replace(/([^\n])\n(#{1,6}\s+)/g, "$1\n\n$2")
+
+  // Ensure blank line after headings
+  normalized = normalized.replace(/(#{1,6}.*?)\n([^\n#\s])/g, "$1\n\n$2")
+
+  // Ensure blank lines around code blocks
+  normalized = normalized.replace(/([^\n`])\n(```)/g, "$1\n\n$2")
+  normalized = normalized.replace(/(```[^\n]*\n[\s\S]*?```)\n([^\n`])/g, "$1\n\n$2")
+
+  // Fix code blocks: ensure they have language tag and proper format
+  normalized = normalized.replace(/```\n([^\n`]+)\n```/g, (match, code) => {
+    // Try to detect language from common patterns
+    const trimmed = code.trim()
+    if (/^(npm|yarn|pnpm|pip|python|bash|sh|curl|wget|git)/i.test(trimmed)) {
+      return `\`\`\`bash\n${code}\n\`\`\``
+    }
+    if (/^(const|let|var|function|import|export|interface|type)/.test(trimmed)) {
+      if (trimmed.includes(".tsx") || trimmed.includes("React") || trimmed.includes("jsx")) {
+        return `\`\`\`tsx\n${code}\n\`\`\``
+      }
+      return `\`\`\`typescript\n${code}\n\`\`\``
+    }
+    if (/^[{[]/.test(trimmed) && /[}\]]$/.test(trimmed)) {
+      return `\`\`\`json\n${code}\n\`\`\``
+    }
+    return match
+  })
+
+  // Ensure blank lines around lists
+  normalized = normalized.replace(/([^\n-*+\d])\n([-*+]|\d+\.)\s/g, "$1\n\n$2 ")
+  normalized = normalized.replace(/([-*+]|\d+\.\s+[^\n]+(\n(?:  |\t)[-*+]|\d+\.\s+[^\n]+)*)\n([^\n\s-*+\d])/g, "$1\n\n$3")
+
+  // Fix nested lists: ensure proper 2-space indentation
+  normalized = normalized.replace(/([-*+]|\d+\.)\s+([^\n]+)\n(?:  |\t)([-*+]|\d+\.)/g, "$1 $2\n  $3")
+
+  // Ensure blank lines around tables
+  normalized = normalized.replace(/([^\n|])\n(\|.*\|)/g, "$1\n\n$2")
+  normalized = normalized.replace(/(\|.*\|)\n([^\n|])/g, "$1\n\n$2")
+
+  // Fix inline code that spans newlines (should be code blocks)
+  normalized = normalized.replace(/`([^`\n]+\n[^`]+)`/g, "```\n$1\n```")
+
+  // Ensure proper spacing around inline code
+  normalized = normalized.replace(/(\S)`([^`]+)`(\S)/g, "$1 `$2` $3")
+
+  // Fix heading hierarchy: prevent skipped levels
+  const lines = normalized.split("\n")
+  const fixedLines: string[] = []
+  let lastHeadingLevel = 0
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/)
+    
+    if (headingMatch) {
+      const level = headingMatch[1].length
+      // If skipping levels, adjust to be one level deeper than last
+      if (level > lastHeadingLevel + 1 && lastHeadingLevel > 0) {
+        const adjustedLevel = lastHeadingLevel + 1
+        fixedLines.push("#".repeat(adjustedLevel) + " " + headingMatch[2])
+        lastHeadingLevel = adjustedLevel
+      } else {
+        fixedLines.push(line)
+        lastHeadingLevel = level
+      }
+    } else {
+      fixedLines.push(line)
+    }
+  }
+
+  normalized = fixedLines.join("\n")
+
+  // Clean up trailing whitespace on each line
+  normalized = normalized.split("\n").map((line) => line.trimEnd()).join("\n")
+
+  // Remove excessive blank lines at the end
+  normalized = normalized.replace(/\n{3,}$/, "\n\n")
+
+  // Ensure exactly one blank line at the end
+  if (!normalized.endsWith("\n")) {
+    normalized += "\n"
+  }
+
+  normalized = normalized.trimStart()
+
+  // Helper function to convert heading text to GitHub anchor
+  const headingToAnchor = (text: string): string => {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "") // Remove special characters except hyphens
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/-+/g, "-") // Collapse multiple hyphens
+      .replace(/^-|-$/g, "") // Remove leading/trailing hyphens
+  }
+
+  // Ensure quick links section exists after the title with clickable anchor links
+  const quickLinksRegex = /\[Quick Links:.*?\]/i
+  const hasQuickLinks = quickLinksRegex.test(normalized)
+  
+  // Extract actual section headings from the document
+  const headings = normalized.match(/^##+\s+(.+)$/gm) || []
+  const sectionMap: Record<string, string> = {}
+  
+  // Map common section names to their anchor variations
+  const sectionNames = [
+    { name: "Introduction", patterns: ["introduction", "intro", "overview"] },
+    { name: "Tech Stack", patterns: ["tech stack", "technology", "technologies", "stack"] },
+    { name: "Prerequisites / Requirements", patterns: ["prerequisites", "requirements", "requirement", "prerequisite"] },
+    { name: "Installation", patterns: ["installation", "install", "setup", "getting started"] },
+    { name: "Configuration", patterns: ["configuration", "config", "setup"] },
+    { name: "Usage", patterns: ["usage", "use", "how to use"] },
+    { name: "Project Structure", patterns: ["project structure", "structure", "directory structure", "file structure"] },
+    { name: "Features", patterns: ["features", "feature"] },
+    { name: "Development", patterns: ["development", "develop", "dev", "development setup"] },
+    { name: "Contributing", patterns: ["contributing", "contribute", "contribution"] },
+    { name: "License", patterns: ["license", "licence", "licensing"] },
+    { name: "FAQ", patterns: ["faq", "frequently asked questions", "questions"] },
+  ]
+
+  // Find matching headings and create anchor links
+  headings.forEach((heading) => {
+    const headingText = heading.replace(/^##+\s+/, "").trim()
+    const anchor = headingToAnchor(headingText)
+    
+    // Try to match with section names
+    for (const section of sectionNames) {
+      const headingLower = headingText.toLowerCase()
+      if (section.patterns.some((pattern) => headingLower.includes(pattern))) {
+        sectionMap[section.name] = anchor
+        break
+      }
+    }
+    
+    // Also add direct mapping
+    sectionMap[headingText] = anchor
+  })
+
+  // Build quick links with anchor links
+  const buildQuickLinks = (): string => {
+    const links: string[] = []
+    
+    sectionNames.forEach((section) => {
+      // Try to find the anchor from section map
+      let anchor = sectionMap[section.name]
+      if (!anchor) {
+        // Fallback: try to find by pattern matching
+        const foundHeading = headings.find((h) => {
+          const hText = h.replace(/^##+\s+/, "").toLowerCase()
+          return section.patterns.some((p) => hText.includes(p))
+        })
+        if (foundHeading) {
+          anchor = headingToAnchor(foundHeading.replace(/^##+\s+/, ""))
+        } else {
+          // Default anchor generation
+          anchor = headingToAnchor(section.name)
+        }
+      }
+      
+      links.push(`[${section.name}](#${anchor})`)
+    })
+    
+    return `[Quick Links: ${links.join(" · ")}]`
+  }
+
+  const quickLinksText = buildQuickLinks()
+  
+  if (!hasQuickLinks) {
+    // Find the first heading and add quick links after the title/tagline
+    const titleMatch = normalized.match(/^(#[^\n]+\n\n[^\n#]+\n\n)/)
+    if (titleMatch) {
+      normalized = normalized.replace(titleMatch[0], titleMatch[0] + quickLinksText + "\n\n")
+    } else {
+      // If no title found, try to add after first heading
+      const firstHeadingMatch = normalized.match(/^(#[^\n]+\n\n)/)
+      if (firstHeadingMatch) {
+        normalized = normalized.replace(firstHeadingMatch[0], firstHeadingMatch[0] + quickLinksText + "\n\n")
+      }
+    }
+  } else {
+    // Replace existing quick links with properly formatted anchor links
+    normalized = normalized.replace(
+      /\[Quick Links:.*?\]/i,
+      quickLinksText
+    )
+    // Ensure quick links have proper spacing (blank lines before and after)
+    normalized = normalized.replace(
+      /(\n)(\[Quick Links:.*?\])(\n)/i,
+      "$1$2$3\n"
+    )
+  }
+
+  return normalized
+}
+
 function buildReadmeSystemPrompt(compressedContext: string, techStackHint: string, customInstructions?: string) {
   return `
-You are GitFriend's README author powered by Groq. Produce a minimal, professional, and publication-ready README.md with clear Markdown hierarchy and spacing.
+You are GitFriend's README author powered by Groq. Produce a minimal, professional, and publication-ready README.md that renders perfectly on GitHub.
 
-Output structure (strict):
-- Start with:
-  # <Project Name>
-  <One-line tagline>
-  _Building 21st century open-source infrastructure_
-  [Learn more »](#introduction)
-- Below that, a "Quick Links" line using internal anchors (Introduction · Tech Stack · Contributing · Discord)
+CRITICAL FORMATTING RULES (GitHub Flavored Markdown):
 
-Then follow with sections in this exact order:
+1. HEADINGS - Strict hierarchy with consistent spacing:
+   - Use # for main title (one per document)
+   - Use ## for main sections (Introduction, Installation, etc.)
+   - Use ### for subsections within main sections
+   - Use #### only when necessary for deep nesting
+   - ALWAYS include one blank line before and after headings
+   - Never skip heading levels (don't go from ## to ####)
+
+2. LISTS - Proper indentation and formatting:
+   - Use - for bullet lists (not *, not HTML <ul>)
+   - Use 1. for numbered lists (not HTML <ol>)
+   - ALWAYS include one blank line before lists
+   - ALWAYS include one blank line after lists
+   - For nested lists, indent with exactly 2 spaces
+   - Never mix code spans with list markers on the same line incorrectly
+   - Example correct format:
+     - Item one
+     - Item two
+       - Nested item with proper 2-space indent
+
+3. CODE BLOCKS AND INLINE CODE:
+   - Use \`code\` for inline code (single backtick)
+   - Use \`\`\`language for fenced code blocks (triple backtick + language)
+   - ALWAYS specify language for code blocks: \`\`\`bash, \`\`\`typescript, \`\`\`json, \`\`\`yaml, \`\`\`python, etc.
+   - ALWAYS include one blank line before code blocks
+   - ALWAYS include one blank line after code blocks
+   - Never place code blocks inside list items without proper indentation
+   - Never mix HTML <code> or <pre> tags - use Markdown only
+
+4. PARAGRAPHS AND SPACING:
+   - ALWAYS separate paragraphs with exactly one blank line
+   - ALWAYS separate sections with exactly one blank line
+   - Never use multiple blank lines consecutively (max one)
+   - Never omit blank lines between different content types (heading, paragraph, list, code)
+
+5. TABLES:
+   - Use pipe syntax: | Column 1 | Column 2 |
+   - Include header separator: |---|---|
+   - Ensure proper alignment with spaces
+   - Include blank lines before and after tables
+
+6. LINKS:
+   - Use [text](url) syntax only (not HTML <a> tags)
+   - For internal links use [text](#anchor) where anchor matches heading (lowercase, hyphens)
+
+7. PROHIBITED:
+   - NO HTML tags (<div>, <span>, <p>, <br>, <hr>, etc.) - use Markdown equivalents
+   - NO custom CSS or inline styles
+   - NO images unless explicitly in context (use ![alt](url) syntax if needed)
+   - NO badges or shields unless in context
+   - NO triple-backticks wrapping the entire document
+   - NO mixed formatting (don't combine HTML and Markdown)
+   - NO invisible Unicode characters
+
+8. TYPOGRAPHY:
+   - Use **bold** for emphasis (not <b> or <strong>)
+   - Use *italic* for emphasis (not <i> or <em>)
+   - Use \`code\` for technical terms, commands, file names
+   - Keep consistent spacing around formatted text
+
+OUTPUT STRUCTURE (follow this order - CRITICAL: Include quick links section with anchor links):
+# <Project Name>
+
+<One-line tagline or brief description>
+
+[Quick Links: [Introduction](#introduction) · [Tech Stack](#tech-stack) · [Prerequisites / Requirements](#prerequisites--requirements) · [Installation](#installation) · [Configuration](#configuration) · [Usage](#usage) · [Project Structure](#project-structure) · [Features](#features) · [Development](#development) · [Contributing](#contributing) · [License](#license) · [FAQ](#faq)]
+
 ## Introduction
+
 ## Tech Stack
-## How It's Built
-## Requirements / Prerequisites
+
+## Prerequisites / Requirements
+
 ## Installation
+
 ## Configuration
+
 ## Usage
+
 ## Project Structure
+
 ## Features
-## Deployment (if applicable)
+
+## Development
+
 ## Contributing
+
 ## License
-## FAQ (optional)
 
-Formatting rules:
-- Use simple Markdown. No HTML, no custom CSS.
-- Center title and tagline visually through spacing (not HTML).
-- Prefer concise descriptions and consistent spacing between sections.
-- Use bullet lists for items, fenced code blocks for commands.
-- Never include triple-backticks around the entire README output.
-- No images, badges, or external decorative assets.
+## FAQ
 
-Authoring rules:
-- Do not fabricate details; derive only from context.
-- Merge any existing README data but avoid repetition.
-- Keep tone neutral, technical, and developer-facing.
-- Focus on clarity and minimalism.
+(Only include sections that are relevant based on the context. Don't fabricate sections.)
+
+AUTHORING RULES:
+- Do not fabricate details; derive only from the provided context
+- Merge existing README data if present, avoiding repetition
+- Keep tone neutral, technical, and developer-facing
+- Focus on clarity, accuracy, and GitHub Markdown compliance
+- Ensure every heading, list, code block, and paragraph is properly spaced
+- Test mentally: "Will this render correctly on GitHub?" before outputting
+
+FINAL CHECK:
+Before outputting, verify:
+✓ Quick Links section is included after the title/tagline (MANDATORY)
+✓ All headings have blank lines before and after
+✓ All lists have blank lines before and after
+✓ All code blocks have language tags and blank lines around them
+✓ No HTML tags are used
+✓ Paragraphs are separated by single blank lines
+✓ Nested lists use proper 2-space indentation
+✓ Inline code uses single backticks, code blocks use triple backticks
+✓ No mixed or broken formatting
+
+REMINDER: The Quick Links section MUST be included in your output with clickable anchor links! Format:
+[Quick Links: [Introduction](#introduction) · [Tech Stack](#tech-stack) · [Prerequisites / Requirements](#prerequisites--requirements) · [Installation](#installation) · [Configuration](#configuration) · [Usage](#usage) · [Project Structure](#project-structure) · [Features](#features) · [Development](#development) · [Contributing](#contributing) · [License](#license) · [FAQ](#faq)]
+
+Important: The anchor links must match the actual section headings. GitHub automatically creates anchors from headings by:
+- Converting to lowercase
+- Replacing spaces with hyphens
+- Removing special characters
+- Example: "## Prerequisites / Requirements" becomes "#prerequisites--requirements"
 
 Context (compressed):
 ${compressedContext}
 
-Tech Stack Hint (best-effort): ${techStackHint}
+Tech Stack Hint: ${techStackHint}
 
-${customInstructions ? `User Notes: ${customInstructions}` : ""}
+${customInstructions ? `\n\nUser Custom Instructions:\n${customInstructions}` : ""}
 `
 }
 
@@ -414,18 +726,26 @@ export async function POST(req: NextRequest) {
                 stream: true,
               })
 
-              let fullReadme = ""
-              for await (const chunk of completion) {
-                const content = chunk.choices?.[0]?.delta?.content || ""
-                if (content) {
-                  fullReadme += content
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`))
-                }
-              }
+               let fullReadme = ""
+               for await (const chunk of completion) {
+                 const content = chunk.choices?.[0]?.delta?.content || ""
+                 if (content) {
+                   fullReadme += content
+                   // Stream content as it arrives
+                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`))
+                 }
+               }
 
-              // Save to cache
-              await redis.set(CACHE_KEYS.README_GENERATION(repoUrl), fullReadme, { ex: CACHE_TTL.README })
-              await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "completed", { ex: CACHE_TTL.STATUS })
+               // Normalize the complete README for proper GitHub rendering
+               const normalizedReadme = normalizeMarkdown(fullReadme)
+               
+               // If normalization made significant changes, send a corrected version signal
+               // The frontend will use the normalized version from cache on next fetch
+               // For now, we just ensure the normalized version is saved
+
+               // Save normalized version to cache
+               await redis.set(CACHE_KEYS.README_GENERATION(repoUrl), normalizedReadme, { ex: CACHE_TTL.README })
+               await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "completed", { ex: CACHE_TTL.STATUS })
               
               controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
               controller.close()
@@ -549,11 +869,14 @@ async function generateReadmeInBackground(repoUrl: string, customInstructions?: 
       throw new Error("Groq did not return content")
     }
 
-    await redis.set(CACHE_KEYS.README_GENERATION(repoUrl), generatedReadme, { ex: CACHE_TTL.README })
+    // Normalize the generated README for perfect GitHub rendering
+    const normalizedReadme = normalizeMarkdown(generatedReadme)
+
+    await redis.set(CACHE_KEYS.README_GENERATION(repoUrl), normalizedReadme, { ex: CACHE_TTL.README })
     await redis.set(CACHE_KEYS.README_STATUS(repoUrl), "completed", { ex: CACHE_TTL.STATUS })
     const totalTime = Date.now() - startTime
     console.info(`[README] Completed background generation for ${repoUrl} in ${totalTime}ms`)
-    return generatedReadme
+    return normalizedReadme
   } catch (error) {
     console.error("[v0] Error generating README:", error)
     const errorMessage = error instanceof Error ? error.message : "Failed to generate README"
