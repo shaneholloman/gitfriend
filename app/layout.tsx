@@ -3,6 +3,7 @@ import "@/app/globals.css"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/auth-context"
+import { GitHubAuthProvider } from "@/context/github-auth-context"
 import { Analytics } from "@vercel/analytics/react"
 import { Toaster } from "@/components/ui/toaster"
 import { Suspense } from "react"
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
+        <GitHubAuthProvider>
         <AuthProvider>
           <ThemeProvider
             attribute="class"
@@ -31,7 +33,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </ThemeProvider>
         </AuthProvider>
         <Analytics />
+        </GitHubAuthProvider>
       </body>
     </html>
   )
 }
+
