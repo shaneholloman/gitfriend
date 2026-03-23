@@ -59,7 +59,7 @@ export function LandingFooter() {
             <ul className="space-y-2 text-xs text-neutral-600 dark:text-neutral-400">
               <li>
                 <a
-                  href="https://github.com/your-org/gitfriend"
+                  href="https://github.com/krishn404/Git-Friend"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="transition-colors hover:text-neutral-900 dark:hover:text-neutral-50"
