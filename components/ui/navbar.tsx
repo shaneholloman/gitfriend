@@ -46,10 +46,19 @@ export function Navbar() {
     return (
       <div className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/95">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Image src="/gitfriend-icon.png" alt="GitFriend Logo" width={24} height={24} />
-            <span className="hidden text-xs sm:inline">Git Friend</span>
-          </Link>
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground"
+        >
+          <Image
+            src="/icon.png"
+            alt="GitFriend Logo"
+            width={24}
+            height={24}
+            className="invert dark:invert-0"
+          />
+          <span className="hidden text-xs sm:inline">Git Friend</span>
+        </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <UserAuthButton />
@@ -85,9 +94,15 @@ export function Navbar() {
       >
         <div className="flex items-center z-10">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/gitfriend-icon.png" alt="GitFriend Logo" width={28} height={28} />
+            <Image
+              src="/icon.png"
+              alt="GitFriend Logo"
+              width={28}
+              height={28}
+              className="invert dark:invert-0"
+            />
           </Link>
-        </div>
+      </div>
 
         <motion.div className="absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2 pointer-events-none">
           {routes.map((route) => (

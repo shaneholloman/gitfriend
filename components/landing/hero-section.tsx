@@ -49,7 +49,7 @@ export function HeroSection() {
       <div className="rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2 shadow-sm">
         <img
           alt="Vercel OSS Program"
-          src="https://vercel.com/oss/program-badge.svg"
+          src="https://vercel.com/oss/program-badge-2026.svg"
           className="h-6 w-auto"
         />
       </div>
