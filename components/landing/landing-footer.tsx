@@ -80,7 +80,7 @@ export function LandingFooter() {
           >
             <img
               alt="Vercel OSS Program"
-              src="https://vercel.com/oss/program-badge.svg"
+              src="https://vercel.com/oss/program-badge-2026.svg"
               className="h-6 w-auto"
             />
           </a>
