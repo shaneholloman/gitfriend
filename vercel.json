@@ -1,20 +1,12 @@
 {
-    "redirects": [
-      {
-        "source": "/(.*)",
-        "has": [
-          { "type": "host", "value": "gitfriend.xyz" }
-        ],
-        "destination": "https://git-friend.xyz/$1",
-        "permanent": true
-      },
-      {
-        "source": "/(.*)",
-        "has": [
-          { "type": "host", "value": "www.gitfriend.xyz" }
-        ],
-        "destination": "https://git-friend.xyz/$1",
-        "permanent": true
-      }
-    ]
-  }
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        { "type": "host", "value": "www.gitfriend.xyz" }
+      ],
+      "destination": "https://gitfriend.xyz/$1",
+      "permanent": true
+    }
+  ]
+}
